@@ -2,13 +2,13 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <RootNamespace>LogParser</RootNamespace>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Caliburn.Micro" Version="4.0.136-rc" />
-    <PackageReference Include="Caliburn.Micro.Core" Version="4.0.136-rc" />
+    <PackageReference Include="Stylet" Version="1.3.3.0" />
   </ItemGroup>
 
 </Project>
