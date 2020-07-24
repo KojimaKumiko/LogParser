@@ -6,10 +6,89 @@
         xmlns:s="https://github.com/canton7/Stylet"
         xmlns:local="clr-namespace:LogParser.Views"
         xmlns:vm="clr-namespace:LogParser.ViewModels"
+        xmlns:data="clr-namespace:LogParser"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:utilities="clr-namespace:Utilities;assembly=Utilities"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:ShellViewModel}"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        Background="{DynamicResource MaterialDesignPaper}"
         Title="Stylet Project" Height="450" Width="800">
-    <Grid>
-        <Button Content="Click Me!" Height="50" Width="75" Command="{s:Action DoSomething}" />
-    </Grid>
+    <materialDesign:DrawerHost IsLeftDrawerOpen="{Binding ElementName=MenuToggleButton, Path=IsChecked}">
+        <materialDesign:DrawerHost.LeftDrawerContent>
+            <DockPanel MinWidth="212">
+                <ToggleButton Style="{StaticResource MaterialDesignHamburgerToggleButton}"
+                              DockPanel.Dock="Top"
+                              HorizontalAlignment="Right" Margin="16" 
+                              IsChecked="{Binding ElementName=MenuToggleButton, Path=IsChecked, Mode=TwoWay}" />
+                <Menu>
+                    <!--<Menu.Resources>
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                            <Setter Property="utilities:TreeHelpers.Modifiers">
+                                <Setter.Value>
+                                    <utilities:ModifierCollection>
+                                        <utilities:Modifier Property="{x:Static Popup.PlacementProperty}" 
+                                                            Value="{x:Static PlacementMode.Right}" 
+                                                            TemplatePartName="PART_Popup" />
+                                    </utilities:ModifierCollection>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Menu.Resources>-->
+                    <!--<MenuItem Header="Item 1">
+                        <MenuItem Header="Sub Item 1" />
+                        <MenuItem Header="Sub Item 2" />
+                        <MenuItem Header="Sub Item 3" />
+                    </MenuItem>
+                    <MenuItem Header="Item 2">
+                        <MenuItem Header="Sub Item 1" />
+                        <MenuItem Header="Sub Item 2" />
+                        <MenuItem Header="Sub Item 3" />
+                    </MenuItem>
+                    <MenuItem Header="Item 3">
+                        <MenuItem Header="Sub Item 1" />
+                        <MenuItem Header="Sub Item 2" />
+                        <MenuItem Header="Sub Item 3" />
+                    </MenuItem>-->
+
+                    <Menu.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel />
+                        </ItemsPanelTemplate>
+                    </Menu.ItemsPanel>
+
+                    <MenuItem Header="Guild Wars 2 (GW2)">
+                        <MenuItem.Style>
+                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                <Setter Property="IsHitTestVisible" Value="False" />
+                            </Style>
+                        </MenuItem.Style>
+                    </MenuItem>
+                    <MenuItem Header="Logger" Command="{s:Action SwitchView}" CommandParameter="{x:Static data:ViewTypes.TestViewModel}" />
+                </Menu>
+            </DockPanel>
+        </materialDesign:DrawerHost.LeftDrawerContent>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+
+            <materialDesign:ColorZone Grid.Row="0" Padding="16" materialDesign:ShadowAssist.ShadowDepth="Depth2"
+                                      Mode="PrimaryMid" DockPanel.Dock="Top">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <ToggleButton Style="{StaticResource MaterialDesignHamburgerToggleButton}" IsChecked="False"
+                                  x:Name="MenuToggleButton" Grid.Column="0"/>
+                </Grid>
+            </materialDesign:ColorZone>
+
+            <ContentControl Grid.Row="1" s:View.Model="{Binding ActiveItem}" />
+            
+        </Grid>
+    </materialDesign:DrawerHost>
 </Window>

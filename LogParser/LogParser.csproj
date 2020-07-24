@@ -2,13 +2,20 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>LogParser</RootNamespace>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MaterialDesignColors" Version="1.2.7-ci1779" />
+    <PackageReference Include="MaterialDesignThemes" Version="3.2.0-ci1779" />
+    <PackageReference Include="ShowMeTheXAML.MSBuild" Version="1.1.0-ci73" />
     <PackageReference Include="Stylet" Version="1.3.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Utilities\Utilities.csproj" />
   </ItemGroup>
 
 </Project>
