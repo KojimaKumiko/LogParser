@@ -10,8 +10,36 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              d:DataContext="{d:DesignInstance vm:TestViewModel}"
              d:DesignHeight="450" d:DesignWidth="800">
-    <StackPanel>
-        <Button Content="Open File" Height="40" Margin="10 10 0 0" HorizontalAlignment="Left" Command="{s:Action SetFile}"/>
-        <!--<Button Content="Parse Selected File" Height="40" Margin="10 10 0 0" HorizontalAlignment="Left" Command="{s:Action ParseFile}" />-->
-    </StackPanel>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="3*" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Column="0" Grid.Row="0" Margin="10 10 0 0">
+            <StackPanel Orientation="Horizontal" Margin="10 0 0 0">
+                <ComboBox ItemsSource="{Binding BossNameFilters}" SelectionChanged="{s:Action BossFilterChanged}" SelectedItem="{Binding SelectedBossFilter, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+            
+            <DataGrid Name="LogGrid" AutoGenerateColumns="False" ItemsSource="{Binding LogFiles}" CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Boss" Binding="{Binding BossName}" />
+                    <DataGridTextColumn Header="Recorder" Binding="{Binding Recorder}" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </StackPanel>
+
+        <StackPanel Grid.ColumnSpan="2" Grid.Row="1" Orientation="Horizontal">
+            <Button Content="Open File" Height="40" Margin="10 10 0 0" HorizontalAlignment="Right" Command="{s:Action SetFile}"/>
+            <!--<Button Content="Parse Selected File" Height="40" Margin="10 10 0 0" HorizontalAlignment="Right" Command="{s:Action ParseFile}" />-->
+            <Button Content="Professions" Height="40" Margin="10 10 0 0" HorizontalAlignment="Right" Command="{s:Action Professions}" />
+            <Button Content="Elite Insights Parsing" Height="40" Margin="10 10 0 0" HorizontalAlignment="Right" Command="{s:Action ParseEI}" />
+            <Button Content="Write to Database" Height="40" Margin="10 10 0 0" HorizontalAlignment="Right" Command="{s:Action WriteToDatabase}" />
+            <Button Content="Read from Database" Height="40" Margin="10 10 0 0" HorizontalAlignment="Right" Command="{s:Action ReadFromDatabase}" />
+        </StackPanel>
+    </Grid>
 </UserControl>
