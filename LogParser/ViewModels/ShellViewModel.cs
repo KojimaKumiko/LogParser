@@ -15,12 +15,12 @@ namespace LogParser.ViewModels
         {
         }
 
-        public void SwitchView(ViewTypes viewType)
+        public void SwitchView(ViewType viewType)
         {
             switch (viewType)
             {
-                case ViewTypes.TestViewModel:
-                    ActivateItem(new TestViewModel());
+                case ViewType.LogParserViewModel:
+                    ActivateItem(new LogParserViewModel());
                     break;
                 default:
                     break;

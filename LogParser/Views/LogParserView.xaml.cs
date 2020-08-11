@@ -16,9 +16,9 @@ namespace LogParser.Views
     /// <summary>
     /// Interaction logic for TestView.xaml
     /// </summary>
-    public partial class TestView : UserControl
+    public partial class LogParserView : UserControl
     {
-        public TestView()
+        public LogParserView()
         {
             InitializeComponent();
         }

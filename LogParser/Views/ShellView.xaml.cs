@@ -21,9 +21,5 @@ namespace LogParser.Views
         {
             InitializeComponent();
         }
-
-        private void Init()
-        {
-        }
     }
 }

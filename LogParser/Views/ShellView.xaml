@@ -64,7 +64,7 @@
                             </Style>
                         </MenuItem.Style>
                     </MenuItem>
-                    <MenuItem Header="Logger" Command="{s:Action SwitchView}" CommandParameter="{x:Static data:ViewTypes.TestViewModel}" />
+                    <MenuItem Header="Logger" Command="{s:Action SwitchView}" CommandParameter="{x:Static data:ViewType.LogParserViewModel}" />
                 </Menu>
             </DockPanel>
         </materialDesign:DrawerHost.LeftDrawerContent>

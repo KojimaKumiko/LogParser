@@ -14,9 +14,9 @@ namespace Database
             context.Database.EnsureDeleted();
             context.Database.EnsureCreated();
 
-            string json = File.ReadAllText(@"SeedData\20200717-195820_vg_kill.json");
-            context.Add(new ParsedLogFile { BossName = "Vale Guardian", Recorder = "Liz Monsuta", Json = json});
-            context.SaveChanges();
+            //string json = File.ReadAllText(@"SeedData\20200717-195820_vg_kill.json");
+            //context.Add(new ParsedLogFile { BossName = "Vale Guardian", Recorder = "Liz Monsuta", Json = json});
+            //context.SaveChanges();
         }
     }
 }

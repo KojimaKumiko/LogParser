@@ -1,42 +1,58 @@
 ﻿using Database;
 using Database.Models;
 using LogParser.Models;
+using LogParser.Models.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using RestEase;
 using Stylet;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows.Controls;
-using System.Windows.Documents;
 
 namespace LogParser.ViewModels
 {
-    public class TestViewModel : Screen
+    public class LogParserViewModel : Screen
     {
         private readonly string clearFilterText = " --- NONE --- ";
 
         private string selectedBossFilter;
 
-        public TestViewModel()
+        private string displayText;
+
+        public LogParserViewModel()
         {
             LogFiles = new BindableCollection<ParsedLogFile>();
+            FilesToParse = new BindableCollection<string>();
             BossNameFilters = new BindableCollection<string>()
             {
                 clearFilterText
             };
+
+            LogFiles.CollectionChanged += LogFilesCollectionChanged;
+            FilesToParse.CollectionChanged += (o, e) => NotifyOfPropertyChange(nameof(CanParseFiles));
+
+            _ = LoadDataFromDatabase();
         }
 
-        public BindableCollection<ParsedLogFile> LogFiles { get; set; }
+        public BindableCollection<ParsedLogFile> LogFiles { get; private set; }
 
-        public BindableCollection<string> BossNameFilters { get; set; }
+        public BindableCollection<string> BossNameFilters { get; private set; }
+
+        public BindableCollection<string> FilesToParse { get; private set; }
+
+        public string DisplayText
+        {
+            get { return displayText; }
+            set { SetAndNotify(ref displayText, value); }
+        }
 
         public string SelectedBossFilter
         {
@@ -44,39 +60,70 @@ namespace LogParser.ViewModels
             set { SetAndNotify(ref selectedBossFilter, value); }
         }
 
+        public bool CanParseFiles
+        {
+            get { return FilesToParse != null && FilesToParse.Count > 0; }
+        }
+
         public void SetFile()
         {
-            OpenFileDialog fileDialog = new OpenFileDialog
+            //OpenFileDialog fileDialog = new OpenFileDialog
+            //{
+            //    Multiselect = false
+            //};
+            //bool result = (bool)fileDialog.ShowDialog();
+
+            //if (result)
+            //{
+            //    using var fs = new FileStream(fileDialog.FileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+            //    if (fileDialog.FileName.EndsWith(".zevtc", StringComparison.InvariantCultureIgnoreCase))
+            //    {
+            //        using var arch = new ZipArchive(fs, ZipArchiveMode.Read);
+
+            //        if (arch.Entries.Count != 1)
+            //        {
+            //            Debug.WriteLine("Something is fishy");
+            //        }
+
+            //        using var data = arch.Entries[0].Open();
+            //        using var ms = new MemoryStream();
+
+            //        data.CopyTo(ms);
+            //        ms.Position = 0;
+            //        ParseData(ms);
+            //    }
+            //    else
+            //    {
+            //        ParseData(fs);
+            //    }
+            //}
+
+            OpenFileDialog fileDialog = new OpenFileDialog()
             {
-                Multiselect = false
+                Multiselect = true,
+                Filter = ".evtc, .zevtc|*.evtc;*.zevtc"
             };
             bool result = (bool)fileDialog.ShowDialog();
 
             if (result)
             {
-                using var fs = new FileStream(fileDialog.FileName, FileMode.Open, FileAccess.Read, FileShare.Read);
-                
-                if (fileDialog.FileName.EndsWith(".zevtc"))
-                {
-                    using var arch = new ZipArchive(fs, ZipArchiveMode.Read);
-
-                    if (arch.Entries.Count != 1)
-                    {
-                        Debug.WriteLine("Something is fishy");
-                    }
-
-                    using var data = arch.Entries[0].Open();
-                    using var ms = new MemoryStream();
-
-                    data.CopyTo(ms);
-                    ms.Position = 0;
-                    ParseData(ms);
-                }
-                else
-                {
-                    ParseData(fs);
-                }
+                FilesToParse.AddRange(fileDialog.FileNames);
+                FilesToParse.Refresh();
             }
+        }
+
+        public void ParseFiles()
+        {
+            Debug.WriteLine("Parse Files.");
+            List<string> parsedFiles = ParseController.Parse(FilesToParse).ToList();
+
+            if (parsedFiles == null || parsedFiles.Count <= 0)
+            {
+                return;
+            }
+
+            FilesToParse.Clear();
         }
 
         public async Task Professions()
@@ -112,76 +159,66 @@ namespace LogParser.ViewModels
             serializer.Serialize(writer, specsToAdd);
         }
 
-        public void ParseEI()
-        {
-            OpenFileDialog fileDialog = new OpenFileDialog
-            {
-                Multiselect = false
-            };
-            bool result = (bool)fileDialog.ShowDialog();
-
-            if (!result)
-            {
-                return;
-            }
-
-            string basePath = @$"{Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)}\EliteInsights\";
-            string config = GetConfig(basePath);
-
-            string args = $"-p -c \"{config}\" \"{fileDialog.FileName}\"";
-            var processInfo = new ProcessStartInfo
-            {
-                FileName = basePath + "GuildWars2EliteInsights.exe",
-                WorkingDirectory = basePath,
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                Arguments = args,
-            };
-
-            using Process process = new Process
-            {
-                StartInfo = processInfo,
-            };
-
-            process.Start();
-            process.WaitForExit();
-        }
-
         public void WriteToDatabase()
         {
-            using DatabaseContext db = new DatabaseContext();
+            //using DatabaseContext db = new DatabaseContext();
 
-            ParsedLogFile logFile = new ParsedLogFile { BossName = "Test", Recorder = "SomePlayer" };
+            //LogFile logFile = new LogFile { BossName = "Test", Recorder = "SomePlayer" };
 
-            db.ParsedLogFiles.Add(logFile);
-            db.SaveChanges();
+            //db.ParsedLogFiles.Add(logFile);
+            //db.SaveChanges();
 
-            LogFiles.Add(logFile);
-
-            if (!BossNameFilters.Contains(logFile.BossName))
-            {
-                BossNameFilters.Add(logFile.BossName);
-            }
+            //LogFiles.Add(logFile);
         }
 
         public void ReadFromDatabase()
         {
             using DatabaseContext db = new DatabaseContext();
             LogFiles.AddRange(db.ParsedLogFiles);
-
-            List<string> bossNames = LogFiles.Select(l => l.BossName).Distinct().ToList();
-            BossNameFilters.AddRange(bossNames.Except(BossNameFilters));
         }
 
-        public void BossFilterChanged(object sender, SelectionChangedEventArgs e)
+        public async void BossFilterChanged(object sender, SelectionChangedEventArgs eventArgs)
         {
-            e.Handled = true;
+            if (string.IsNullOrWhiteSpace(selectedBossFilter) || eventArgs == null)
+            {
+                return;
+            }
 
-            if (!string.IsNullOrWhiteSpace(selectedBossFilter) && SelectedBossFilter.Equals(clearFilterText))
+            using DatabaseContext db = new DatabaseContext();
+
+            var logFiles = db.ParsedLogFiles.AsQueryable();
+
+            if (SelectedBossFilter.Equals(clearFilterText, StringComparison.InvariantCultureIgnoreCase))
             {
                 SelectedBossFilter = null;
             }
+            else
+            {
+                logFiles = logFiles.Where(l => l.BossName == SelectedBossFilter);
+            }
+
+            var filteredLogFiles = await logFiles.ToListAsync().ConfigureAwait(true);
+
+            LogFiles.Clear();
+            LogFiles.AddRange(filteredLogFiles);
+        }
+
+        public async void GetGithubRepo()
+        {
+            IGitHubApi githubApi = RestClient.For<IGitHubApi>(@"https://api.github.com");
+            var repo = await githubApi.GetLatestRelease("baaron4", "GW2-Elite-Insights-Parser").ConfigureAwait(true);
+            Debug.WriteLine(repo);
+        }
+
+        public void CheckVersion()
+        {
+            FileVersionInfo fileVersionInfo = ParseController.GetFileVersionInfo();
+            if (fileVersionInfo == null)
+            {
+                DisplayText = "EI is not installed";
+            }
+
+            DisplayText = fileVersionInfo.ToString();
         }
 
         private void ParseData(Stream stream)
@@ -322,15 +359,22 @@ namespace LogParser.ViewModels
             }
         }
 
-        private static string GetConfig(string path)
+        private async Task LoadDataFromDatabase()
         {
-            var defaultConfig = @$"{Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)}\EliteInsightsConfig.conf";
-            var destConfig = path + "EIConfig.conf";
+            using DatabaseContext db = new DatabaseContext();
+            List<ParsedLogFile> parsedLogs = await db.ParsedLogFiles.ToListAsync().ConfigureAwait(true);
+            LogFiles.AddRange(parsedLogs);
+        }
 
-            File.Copy(defaultConfig, destConfig, true);
-            File.AppendAllLines(destConfig, new string[] { @$"OutLocation={path}logs\" });
+        private void LogFilesCollectionChanged(object sender, NotifyCollectionChangedEventArgs eventArgs)
+        {
+            if (LogFiles == null || LogFiles.Count <= 0)
+            {
+                return;
+            }
 
-            return destConfig;
+            var bossNames = LogFiles.Select(l => l.BossName).Distinct().Except(BossNameFilters).ToList();
+            BossNameFilters.AddRange(bossNames);
         }
     }
 }
