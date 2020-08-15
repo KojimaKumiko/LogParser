@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace LogParser
 {
@@ -25,7 +26,7 @@ namespace LogParser
         /// </summary>
         /// <param name="fileNames">The files to parse. The full path is required.</param>
         /// <returns>A list of strings containing the paths for the generated .json and .html files for each parsed file.</returns>
-        public static IEnumerable<string> Parse(IEnumerable<string> fileNames)
+        public static async Task<IEnumerable<string>> ParseAsync(IEnumerable<string> fileNames)
         {
             if (!IsInstalled())
             {
@@ -62,8 +63,13 @@ namespace LogParser
                 StartInfo = processInfo,
             };
 
-            process.Start();
-            process.WaitForExit();
+            var task = Task.Run(() =>
+            {
+                process.Start();
+                process.WaitForExit();
+            });
+
+            await task.ConfigureAwait(false);
 
             return Directory.EnumerateFiles(logPath);
         }

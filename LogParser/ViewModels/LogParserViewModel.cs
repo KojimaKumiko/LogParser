@@ -3,14 +3,17 @@ using Database.Models;
 using LogParser.Models;
 using LogParser.Models.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Win32;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using RestEase;
 using Stylet;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -27,6 +30,8 @@ namespace LogParser.ViewModels
 
         private string displayText;
 
+        private Dictionary<string, PropertyInfo> JsonProperties { get; set; }
+
         public LogParserViewModel()
         {
             LogFiles = new BindableCollection<ParsedLogFile>();
@@ -35,6 +40,7 @@ namespace LogParser.ViewModels
             {
                 clearFilterText
             };
+            JsonProperties = new Dictionary<string, PropertyInfo>();
 
             LogFiles.CollectionChanged += LogFilesCollectionChanged;
             FilesToParse.CollectionChanged += (o, e) => NotifyOfPropertyChange(nameof(CanParseFiles));
@@ -113,14 +119,60 @@ namespace LogParser.ViewModels
             }
         }
 
-        public void ParseFiles()
+        public async Task ParseFiles()
         {
             Debug.WriteLine("Parse Files.");
-            List<string> parsedFiles = ParseController.Parse(FilesToParse).ToList();
+            List<string> parsedFiles = (await ParseController.ParseAsync(FilesToParse).ConfigureAwait(false)).ToList();
 
             if (parsedFiles == null || parsedFiles.Count <= 0)
             {
                 return;
+            }
+
+            foreach (string file in parsedFiles.Where(p => p.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase)))
+            {
+                using StreamReader sr = File.OpenText(file);
+                using JsonReader reader = new JsonTextReader(sr);
+
+                string currentProp = string.Empty;
+                string[] propsToSkip = new string[]
+                {
+                    "targets",
+                    "players",
+                    "phases",
+                    "mechanics",
+                    "uploadLinks",
+                    "skillMap",
+                    "buffMap",
+                    "damageModMap",
+                    "personalBuffs",
+                };
+                ParsedLogFile logFile = new ParsedLogFile();
+
+                while (reader.Read())
+                {
+                    if (reader.Value != null)
+                    {
+                        if (reader.TokenType == JsonToken.PropertyName)
+                        {
+                            currentProp = reader.Value.ToString();
+                        }
+
+                        if (reader.TokenType != JsonToken.PropertyName)
+                        {
+                            PopulateLogFile(logFile, currentProp, reader.Value);
+                        }
+                    }
+                    else
+                    {
+                        if ((reader.TokenType == JsonToken.StartArray || reader.TokenType == JsonToken.StartObject) && propsToSkip.Contains(currentProp))
+                        {
+                            reader.Skip();
+                        }
+                    }
+                }
+
+                LogFiles.Add(logFile);
             }
 
             FilesToParse.Clear();
@@ -219,6 +271,36 @@ namespace LogParser.ViewModels
             }
 
             DisplayText = fileVersionInfo.ToString();
+        }
+
+        private void PopulateLogFile(ParsedLogFile logFile, string propertyName, object value)
+        {
+            // Populate the Dictionary
+            if (JsonProperties.Count <= 0)
+            {
+                var properties = logFile.GetType().GetProperties();
+                foreach (var prop in properties)
+                {
+                    JsonPropertyAttribute jsonPropertyAttribute = (JsonPropertyAttribute)Attribute.GetCustomAttribute(prop, typeof(JsonPropertyAttribute));
+                    if (jsonPropertyAttribute != null)
+                    {
+                        JsonProperties.Add(jsonPropertyAttribute.PropertyName, prop);
+                    }
+                }
+            }
+
+            JsonProperties.TryGetValue(propertyName, out var propInfo);
+            if (propInfo == null)
+            {
+                return;
+            }
+
+            if (propInfo.PropertyType == typeof(DateTime))
+            {
+                value = Convert.ToDateTime(value, CultureInfo.InvariantCulture);
+            }
+
+            propInfo.SetValue(logFile, value);
         }
 
         private void ParseData(Stream stream)
