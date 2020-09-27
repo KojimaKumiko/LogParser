@@ -24,13 +24,28 @@ namespace LogParser.ViewModels
 {
     public class LogParserViewModel : Screen
     {
+        private const string DialogIdentifier = "RootDialogHost";
+
         private readonly string clearFilterText = " --- NONE --- ";
 
         private string selectedBossFilter;
 
         private string displayText;
 
-        private Dictionary<string, PropertyInfo> JsonProperties { get; set; }
+        private string eliteInsightsVersion;
+
+        private string updateEliteInsightsContent;
+
+        private int progress;
+
+        private bool showProgressBar;
+
+        private bool installed;
+
+        /// <summary>
+        /// Maps the name of the class to a dictionary, which maps the name of the properties of the json to the properties of the class.
+        /// </summary>
+        private Dictionary<string, Dictionary<string, PropertyInfo>> JsonProperties { get; set; }
 
         public LogParserViewModel()
         {
@@ -40,10 +55,24 @@ namespace LogParser.ViewModels
             {
                 clearFilterText
             };
-            JsonProperties = new Dictionary<string, PropertyInfo>();
+            JsonProperties = new Dictionary<string, Dictionary<string, PropertyInfo>>();
 
             LogFiles.CollectionChanged += LogFilesCollectionChanged;
             FilesToParse.CollectionChanged += (o, e) => NotifyOfPropertyChange(nameof(CanParseFiles));
+
+            var fileVersion = ParseController.GetFileVersionInfo();
+            if (fileVersion == null)
+            {
+                EliteInsightsVersion = "Not Installed";
+                UpdateEliteInsightsContent = "Install Elite Insights";
+                installed = false;
+            }
+            else
+            {
+                EliteInsightsVersion = fileVersion.FileVersion;
+                UpdateEliteInsightsContent = "Update Elite Insights";
+                installed = true;
+            }
 
             _ = LoadDataFromDatabase();
         }
@@ -64,6 +93,30 @@ namespace LogParser.ViewModels
         {
             get { return selectedBossFilter; }
             set { SetAndNotify(ref selectedBossFilter, value); }
+        }
+
+        public string EliteInsightsVersion
+        {
+            get { return eliteInsightsVersion; }
+            set { SetAndNotify(ref eliteInsightsVersion, value); }
+        }
+
+        public string UpdateEliteInsightsContent
+        {
+            get { return updateEliteInsightsContent; }
+            set { SetAndNotify(ref updateEliteInsightsContent, value); }
+        }
+
+        public int Progress
+        {
+            get { return progress; }
+            set { SetAndNotify(ref progress, value); }
+        }
+
+        public bool ShowProgressBar
+        {
+            get { return showProgressBar; }
+            set { SetAndNotify(ref showProgressBar, value); }
         }
 
         public bool CanParseFiles
@@ -138,7 +191,7 @@ namespace LogParser.ViewModels
                 string[] propsToSkip = new string[]
                 {
                     "targets",
-                    "players",
+                    //"players",
                     "phases",
                     "mechanics",
                     "uploadLinks",
@@ -146,8 +199,46 @@ namespace LogParser.ViewModels
                     "buffMap",
                     "damageModMap",
                     "personalBuffs",
+                    "weapons",
+                    "targetDamage1S",
+                    "targetDamageDist",
+                    "statsTargets",
+                    "support",
+                    "damageModifiers",
+                    "damageModifiersTarget",
+                    "buffUptimes",
+                    "selfBuffs",
+                    "groupBuffs",
+                    "offGroupBuffs",
+                    "squadBuffs",
+                    "buffUptimesActive",
+                    "selfBuffsActive",
+                    "groupBuffsActive",
+                    "offGroupBuffsActive",
+                    "squadBuffsActive",
+                    "consumables",
+                    "activeTimes",
+                    "minions",
+                    "dpsAll",
+                    "statsAll",
+                    "defenses",
+                    "totalDamageDist",
+                    "totalDamageTaken",
+                    "rotation",
+                    "actorPowerDamage",
                 };
+
                 ParsedLogFile logFile = new ParsedLogFile();
+                logFile.Players = new List<LogPlayer>();
+
+                List<LogPlayer> logPlayers = new List<LogPlayer>();
+                LogPlayer logPlayer = new LogPlayer();
+
+                DpsTarget dpsTarget = new DpsTarget();
+
+                bool parseLogFile = true;
+                bool parsePlayers = false;
+                bool parseDpsTargets = false;
 
                 while (reader.Read())
                 {
@@ -156,26 +247,86 @@ namespace LogParser.ViewModels
                         if (reader.TokenType == JsonToken.PropertyName)
                         {
                             currentProp = reader.Value.ToString();
+
+                            if (currentProp.Equals("players", StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                parsePlayers = true;
+                            }
+                            else if (currentProp.Equals("dpsTargets", StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                parseDpsTargets = true;
+                            }
                         }
 
                         if (reader.TokenType != JsonToken.PropertyName)
                         {
-                            PopulateLogFile(logFile, currentProp, reader.Value);
+                            if (parseLogFile)
+                            {
+                                PopulateLogFile(logFile, currentProp, reader.Value);
+                            }
+                            else if (parsePlayers)
+                            {
+                                if (parseDpsTargets)
+                                {
+                                    PopulateLogFile(dpsTarget, currentProp, reader.Value);
+                                }
+                                else
+                                {
+                                    PopulateLogFile(logPlayer, currentProp, reader.Value);
+                                }
+                            }
                         }
                     }
-                    else
+                    else if ((reader.TokenType == JsonToken.StartArray || reader.TokenType == JsonToken.StartObject) && propsToSkip.Contains(currentProp))
                     {
-                        if ((reader.TokenType == JsonToken.StartArray || reader.TokenType == JsonToken.StartObject) && propsToSkip.Contains(currentProp))
+                        reader.Skip();
+                        parseLogFile = false;
+
+                        if (currentProp.Equals("rotation", StringComparison.InvariantCultureIgnoreCase))
                         {
-                            reader.Skip();
+                            logPlayer.DpsTargets = new List<DpsTarget> { dpsTarget };
+                            dpsTarget = new DpsTarget();
+
+                            logPlayers.Add(logPlayer);
+                            logPlayer = new LogPlayer();
+
+                            currentProp = string.Empty;
                         }
+                    }
+                    else if (reader.TokenType == JsonToken.EndObject && currentProp.Equals("actorPowerDamage", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        parseDpsTargets = false;
                     }
                 }
+
+                logFile.Players.AddRange(logPlayers);
 
                 LogFiles.Add(logFile);
             }
 
+            using DatabaseContext db = new DatabaseContext();
+
+            db.ParsedLogFiles.AddRange(LogFiles);
+
+            await db.SaveChangesAsync().ConfigureAwait(false);
+
+            ParseController.ClearLogFolder();
             FilesToParse.Clear();
+        }
+
+        public async Task UpdateEliteInsights()
+        {
+            await ParseController.InstallEliteInsights().ConfigureAwait(true);
+
+            var fileVersion = ParseController.GetFileVersionInfo();
+            EliteInsightsVersion = fileVersion.FileVersion;
+            UpdateEliteInsightsContent = "Update Elite Insights";
+
+            string message = installed ? "Successfully updated Elite Insights!" : "Successfully installed Elite Insights!";
+            var messageModel = new MessageViewModel(message);
+            await MaterialDesignThemes.Wpf.DialogHost.Show(messageModel, DialogIdentifier).ConfigureAwait(true);
+
+            installed = true;
         }
 
         public async Task Professions()
@@ -209,18 +360,6 @@ namespace LogParser.ViewModels
                 Formatting = Formatting.None
             };
             serializer.Serialize(writer, specsToAdd);
-        }
-
-        public void WriteToDatabase()
-        {
-            //using DatabaseContext db = new DatabaseContext();
-
-            //LogFile logFile = new LogFile { BossName = "Test", Recorder = "SomePlayer" };
-
-            //db.ParsedLogFiles.Add(logFile);
-            //db.SaveChanges();
-
-            //LogFiles.Add(logFile);
         }
 
         public void ReadFromDatabase()
@@ -273,23 +412,34 @@ namespace LogParser.ViewModels
             DisplayText = fileVersionInfo.ToString();
         }
 
-        private void PopulateLogFile(ParsedLogFile logFile, string propertyName, object value)
+        private void PopulateLogFile<T>(T logObject, string propertyName, object value)
         {
-            // Populate the Dictionary
-            if (JsonProperties.Count <= 0)
+            var logType = logObject.GetType();
+            if (JsonProperties.Count <= 0 || !JsonProperties.ContainsKey(logType.Name))
             {
-                var properties = logFile.GetType().GetProperties();
+                var dictionary = new Dictionary<string, PropertyInfo>();
+                var properties = logType.GetProperties();
+
                 foreach (var prop in properties)
                 {
                     JsonPropertyAttribute jsonPropertyAttribute = (JsonPropertyAttribute)Attribute.GetCustomAttribute(prop, typeof(JsonPropertyAttribute));
                     if (jsonPropertyAttribute != null)
                     {
-                        JsonProperties.Add(jsonPropertyAttribute.PropertyName, prop);
+                        dictionary.Add(jsonPropertyAttribute.PropertyName, prop);
                     }
                 }
+
+                JsonProperties.Add(logType.Name, dictionary);
             }
 
-            JsonProperties.TryGetValue(propertyName, out var propInfo);
+            JsonProperties.TryGetValue(logType.Name, out var jsonDictionary);
+
+            if (jsonDictionary == null)
+            {
+                return;
+            }
+
+            jsonDictionary.TryGetValue(propertyName, out var propInfo);
             if (propInfo == null)
             {
                 return;
@@ -300,145 +450,7 @@ namespace LogParser.ViewModels
                 value = Convert.ToDateTime(value, CultureInfo.InvariantCulture);
             }
 
-            propInfo.SetValue(logFile, value);
-        }
-
-        private void ParseData(Stream stream)
-        {
-            using var reader = new BinaryReader(stream, new System.Text.UTF8Encoding());
-            string buildVersion = GetString(stream, 12);
-
-            Debug.WriteLine($"Build Version: {buildVersion}");
-
-            byte revision = reader.ReadByte();
-            Debug.WriteLine($"Revision: {revision}");
-
-            var id = reader.ReadUInt16();
-            Debug.WriteLine($"ID: {id}");
-
-            SafeSkip(stream, 1);
-
-            // Agent Data
-            // 4 bytes: player count
-            int agentCount = reader.ReadInt32();
-            List<AgentData> agents = new List<AgentData>();
-
-            for (int i = 0; i < agentCount; i++)
-            {
-                AgentData agent = new AgentData
-                {
-                    Agent = reader.ReadUInt64(),
-                    Prof = reader.ReadUInt32(),
-                    IsElite = reader.ReadUInt32(),
-                    Toughness = reader.ReadUInt16(),
-                    Concentration = reader.ReadUInt16(),
-                    Healing = reader.ReadUInt16(),
-                    HitboxWidth = reader.ReadUInt16(),
-                    Condition = reader.ReadUInt16(),
-                    HitboxHeight = reader.ReadUInt16(),
-                    Name = GetString(stream, 68, false),
-                };
-
-                if (agent.IsElite == 0xFFFFFFFF)
-                {
-                    if ((agent.Prof & 0xffff0000) == 0xffff0000)
-                    {
-                        Debug.WriteLine("Gadget");
-                    }
-                    else
-                    {
-                        Debug.WriteLine("NPC");
-                    }
-                }
-
-                agents.Add(agent);
-            }
-
-            // Skill Data
-            // 4 bytes: player count
-            uint skillCount = reader.ReadUInt32();
-
-            List<SkillData> skills = new List<SkillData>();
-            // 68 bytes: each skill
-            for (int i = 0; i < skillCount; i++)
-            {
-                SkillData skill = new SkillData
-                {
-                    SkillID = reader.ReadInt32(), // 4 bytes: Skill ID
-                    Name = GetString(stream, 64), // 64 bytes: Skill Name
-                };
-
-                skills.Add(skill);
-            }
-
-            long cbtItemCount = (reader.BaseStream.Length - reader.BaseStream.Position) / 64;
-            List<CombatData> combats = new List<CombatData>();
-            for (long i = 0; i < cbtItemCount; i++)
-            {
-                CombatData combatData = new CombatData
-                {
-                    Time = reader.ReadUInt64(),
-                    SrcAgent = reader.ReadUInt64(),
-                    DstAgent = reader.ReadUInt64(),
-                    Value = reader.ReadInt32(),
-                    BuffDmg = reader.ReadInt32(),
-                    OverstackValue = reader.ReadUInt32(),
-                    SkillID = reader.ReadUInt32(),
-                    SrcInstID = reader.ReadUInt16(),
-                    DstInstID = reader.ReadUInt16(),
-                    SrcMasterInstID = reader.ReadUInt16(),
-                    DstMasterInstID = reader.ReadUInt16(),
-                    IFF = reader.ReadByte(),
-                    Buff = reader.ReadByte(),
-                    Result = reader.ReadByte(),
-                    IsActivation = reader.ReadByte(),
-                    IsBuffRemove = reader.ReadByte(),
-                    IsNinety = reader.ReadByte(),
-                    IsFifty = reader.ReadByte(),
-                    IsMoving = reader.ReadByte(),
-                    IsStateChange = reader.ReadByte(),
-                    IsFlanking = reader.ReadByte(),
-                    IsShields = reader.ReadByte(),
-                    IsOffcycle = reader.ReadByte(),
-                    Pad = reader.ReadUInt32(),
-                };
-
-                combats.Add(combatData);
-            }
-        }
-
-        private string GetString(Stream stream, int length, bool nullTerminated = true)
-        {
-            byte[] bytes = new byte[length];
-            stream.Read(bytes, 0, length);
-            if (nullTerminated)
-            {
-                for (int i = 0; i < length; ++i)
-                {
-                    if (bytes[i] == 0)
-                    {
-                        length = i;
-                        break;
-                    }
-                }
-            }
-            return System.Text.Encoding.UTF8.GetString(bytes, 0, length);
-        }
-
-        private void SafeSkip(Stream stream, long bytesToSkip)
-        {
-            if (stream.CanSeek)
-            {
-                stream.Seek(bytesToSkip, SeekOrigin.Current);
-            }
-            else
-            {
-                while (bytesToSkip > 0)
-                {
-                    stream.ReadByte();
-                    --bytesToSkip;
-                }
-            }
+            propInfo.SetValue(logObject, value);
         }
 
         private async Task LoadDataFromDatabase()
@@ -458,5 +470,148 @@ namespace LogParser.ViewModels
             var bossNames = LogFiles.Select(l => l.BossName).Distinct().Except(BossNameFilters).ToList();
             BossNameFilters.AddRange(bossNames);
         }
+
+        private void HandleProgressChangedEvent(object sender, ProgressChangedEventArgs eventArgs)
+        {
+            Progress = eventArgs.Progress;
+        }
+
+        //private void ParseData(Stream stream)
+        //{
+        //    using var reader = new BinaryReader(stream, new System.Text.UTF8Encoding());
+        //    string buildVersion = GetString(stream, 12);
+
+        //    Debug.WriteLine($"Build Version: {buildVersion}");
+
+        //    byte revision = reader.ReadByte();
+        //    Debug.WriteLine($"Revision: {revision}");
+
+        //    var id = reader.ReadUInt16();
+        //    Debug.WriteLine($"ID: {id}");
+
+        //    SafeSkip(stream, 1);
+
+        //    // Agent Data
+        //    // 4 bytes: player count
+        //    int agentCount = reader.ReadInt32();
+        //    List<AgentData> agents = new List<AgentData>();
+
+        //    for (int i = 0; i < agentCount; i++)
+        //    {
+        //        AgentData agent = new AgentData
+        //        {
+        //            Agent = reader.ReadUInt64(),
+        //            Prof = reader.ReadUInt32(),
+        //            IsElite = reader.ReadUInt32(),
+        //            Toughness = reader.ReadUInt16(),
+        //            Concentration = reader.ReadUInt16(),
+        //            Healing = reader.ReadUInt16(),
+        //            HitboxWidth = reader.ReadUInt16(),
+        //            Condition = reader.ReadUInt16(),
+        //            HitboxHeight = reader.ReadUInt16(),
+        //            Name = GetString(stream, 68, false),
+        //        };
+
+        //        if (agent.IsElite == 0xFFFFFFFF)
+        //        {
+        //            if ((agent.Prof & 0xffff0000) == 0xffff0000)
+        //            {
+        //                Debug.WriteLine("Gadget");
+        //            }
+        //            else
+        //            {
+        //                Debug.WriteLine("NPC");
+        //            }
+        //        }
+
+        //        agents.Add(agent);
+        //    }
+
+        //    // Skill Data
+        //    // 4 bytes: player count
+        //    uint skillCount = reader.ReadUInt32();
+
+        //    List<SkillData> skills = new List<SkillData>();
+        //    // 68 bytes: each skill
+        //    for (int i = 0; i < skillCount; i++)
+        //    {
+        //        SkillData skill = new SkillData
+        //        {
+        //            SkillID = reader.ReadInt32(), // 4 bytes: Skill ID
+        //            Name = GetString(stream, 64), // 64 bytes: Skill Name
+        //        };
+
+        //        skills.Add(skill);
+        //    }
+
+        //    long cbtItemCount = (reader.BaseStream.Length - reader.BaseStream.Position) / 64;
+        //    List<CombatData> combats = new List<CombatData>();
+        //    for (long i = 0; i < cbtItemCount; i++)
+        //    {
+        //        CombatData combatData = new CombatData
+        //        {
+        //            Time = reader.ReadUInt64(),
+        //            SrcAgent = reader.ReadUInt64(),
+        //            DstAgent = reader.ReadUInt64(),
+        //            Value = reader.ReadInt32(),
+        //            BuffDmg = reader.ReadInt32(),
+        //            OverstackValue = reader.ReadUInt32(),
+        //            SkillID = reader.ReadUInt32(),
+        //            SrcInstID = reader.ReadUInt16(),
+        //            DstInstID = reader.ReadUInt16(),
+        //            SrcMasterInstID = reader.ReadUInt16(),
+        //            DstMasterInstID = reader.ReadUInt16(),
+        //            IFF = reader.ReadByte(),
+        //            Buff = reader.ReadByte(),
+        //            Result = reader.ReadByte(),
+        //            IsActivation = reader.ReadByte(),
+        //            IsBuffRemove = reader.ReadByte(),
+        //            IsNinety = reader.ReadByte(),
+        //            IsFifty = reader.ReadByte(),
+        //            IsMoving = reader.ReadByte(),
+        //            IsStateChange = reader.ReadByte(),
+        //            IsFlanking = reader.ReadByte(),
+        //            IsShields = reader.ReadByte(),
+        //            IsOffcycle = reader.ReadByte(),
+        //            Pad = reader.ReadUInt32(),
+        //        };
+
+        //        combats.Add(combatData);
+        //    }
+        //}
+
+        //private string GetString(Stream stream, int length, bool nullTerminated = true)
+        //{
+        //    byte[] bytes = new byte[length];
+        //    stream.Read(bytes, 0, length);
+        //    if (nullTerminated)
+        //    {
+        //        for (int i = 0; i < length; ++i)
+        //        {
+        //            if (bytes[i] == 0)
+        //            {
+        //                length = i;
+        //                break;
+        //            }
+        //        }
+        //    }
+        //    return System.Text.Encoding.UTF8.GetString(bytes, 0, length);
+        //}
+
+        //private void SafeSkip(Stream stream, long bytesToSkip)
+        //{
+        //    if (stream.CanSeek)
+        //    {
+        //        stream.Seek(bytesToSkip, SeekOrigin.Current);
+        //    }
+        //    else
+        //    {
+        //        while (bytesToSkip > 0)
+        //        {
+        //            stream.ReadByte();
+        //            --bytesToSkip;
+        //        }
+        //    }
+        //}
     }
 }

@@ -51,7 +51,6 @@ namespace Database.Models
         [JsonProperty("isCM")]
         public bool IsCM { get; set; }
 
-        [JsonProperty("players")]
         public List<LogPlayer> Players { get; set; }
     }
 }
