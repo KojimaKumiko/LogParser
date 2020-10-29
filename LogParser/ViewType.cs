@@ -8,5 +8,6 @@ namespace LogParser
     {
         None = 0,
         LogParserViewModel = 1,
+        SettingsViewModel = 2,
     }
 }

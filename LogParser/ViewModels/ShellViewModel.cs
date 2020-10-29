@@ -22,6 +22,9 @@ namespace LogParser.ViewModels
                 case ViewType.LogParserViewModel:
                     ActivateItem(new LogParserViewModel());
                     break;
+                case ViewType.SettingsViewModel:
+                    ActivateItem(new SettingsViewModel());
+                    break;
                 default:
                     break;
             }

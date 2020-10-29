@@ -1,10 +1,6 @@
 ﻿using Database.Models;
-using Microsoft.EntityFrameworkCore;
+using Database.Models.Enums;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Text;
 
 namespace Database
 {
@@ -14,15 +10,20 @@ namespace Database
         {
             _ = context ?? throw new ArgumentNullException(nameof(context));
 
+            bool shouldSeed = false;
+
 #if DEBUG
-            context.Database.EnsureDeleted();
-            context.Database.EnsureCreated();
+            //context.Database.EnsureDeleted();
+            shouldSeed = context.Database.EnsureCreated();
 #else
             context.Database.Migrate();
 #endif
-            //string json = File.ReadAllText(@"SeedData\20200717-195820_vg_kill.json");
-            //context.Add(new ParsedLogFile { BossName = "Vale Guardian", Recorder = "Liz Monsuta", Json = json});
-            //context.SaveChanges();
+
+            if (shouldSeed)
+            {
+                context.Settings.Add(new Settings { Name = SettingManager.DpsReport, Value = "False", DisplayOrder = 1, SettingsType = SettingsType.Boolean });
+                context.SaveChanges();
+            }
         }
     }
 }

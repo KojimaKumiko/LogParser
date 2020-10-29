@@ -16,6 +16,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Controls;
@@ -77,6 +79,12 @@ namespace LogParser.ViewModels
             _ = LoadDataFromDatabase();
         }
 
+        public static string AssemblyLocation => Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+        public static string BaseLogResult => "LogResult";
+
+        public static string LogResultPath => Path.Combine(AssemblyLocation, BaseLogResult);
+
         public BindableCollection<ParsedLogFile> LogFiles { get; private set; }
 
         public BindableCollection<string> BossNameFilters { get; private set; }
@@ -126,38 +134,6 @@ namespace LogParser.ViewModels
 
         public void SetFile()
         {
-            //OpenFileDialog fileDialog = new OpenFileDialog
-            //{
-            //    Multiselect = false
-            //};
-            //bool result = (bool)fileDialog.ShowDialog();
-
-            //if (result)
-            //{
-            //    using var fs = new FileStream(fileDialog.FileName, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-            //    if (fileDialog.FileName.EndsWith(".zevtc", StringComparison.InvariantCultureIgnoreCase))
-            //    {
-            //        using var arch = new ZipArchive(fs, ZipArchiveMode.Read);
-
-            //        if (arch.Entries.Count != 1)
-            //        {
-            //            Debug.WriteLine("Something is fishy");
-            //        }
-
-            //        using var data = arch.Entries[0].Open();
-            //        using var ms = new MemoryStream();
-
-            //        data.CopyTo(ms);
-            //        ms.Position = 0;
-            //        ParseData(ms);
-            //    }
-            //    else
-            //    {
-            //        ParseData(fs);
-            //    }
-            //}
-
             OpenFileDialog fileDialog = new OpenFileDialog()
             {
                 Multiselect = true,
@@ -181,6 +157,8 @@ namespace LogParser.ViewModels
             {
                 return;
             }
+
+            List<ParsedLogFile> parsedLogs = new List<ParsedLogFile>();
 
             foreach (string file in parsedFiles.Where(p => p.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase)))
             {
@@ -301,17 +279,49 @@ namespace LogParser.ViewModels
 
                 logFile.Players.AddRange(logPlayers);
 
-                LogFiles.Add(logFile);
+                parsedLogs.Add(logFile);
             }
 
             using DatabaseContext db = new DatabaseContext();
 
-            db.ParsedLogFiles.AddRange(LogFiles);
+            bool uploadToDpsReport = await SettingManager.GetDpsReportUploadAsync(db).ConfigureAwait(true);
+
+            if (uploadToDpsReport)
+            {
+                IDpsReport dpsReportApi = RestClient.For<IDpsReport>(@"https://dps.report");
+
+                foreach (string file in FilesToParse)
+                {
+                    string fileName = file.Split("\\").Last();
+                    byte[] fileContent = await File.ReadAllBytesAsync(file).ConfigureAwait(true);
+
+                    using MultipartFormDataContent multiPartContent = new MultipartFormDataContent("----myBoundary");
+                    using ByteArrayContent byteArrayContent = new ByteArrayContent(fileContent);
+
+                    byteArrayContent.Headers.Add("Content-Type", "application/octet-stream");
+                    multiPartContent.Add(byteArrayContent, "file", fileName);
+
+                    try
+                    {
+                        var response = dpsReportApi.UploadContent(multiPartContent);
+                        Debug.WriteLine(response);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine(ex);
+                    }
+                }
+            }
+
+            db.ParsedLogFiles.AddRange(parsedLogs);
 
             await db.SaveChangesAsync().ConfigureAwait(false);
 
-            ParseController.ClearLogFolder();
+            //ParseController.ClearLogFolder();
             FilesToParse.Clear();
+
+            // load the new logs in
+            await LoadDataFromDatabase().ConfigureAwait(true);
         }
 
         public async Task UpdateEliteInsights()
@@ -327,45 +337,6 @@ namespace LogParser.ViewModels
             await MaterialDesignThemes.Wpf.DialogHost.Show(messageModel, DialogIdentifier).ConfigureAwait(true);
 
             installed = true;
-        }
-
-        public async Task Professions()
-        {
-            string filePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/content/Specs.json";
-            if (!File.Exists(filePath))
-            {
-                var fs = File.Create(filePath);
-                fs.Close();
-            }
-
-            IGuildWars2Api guildWars2Api = RestClient.For<IGuildWars2Api>("https://api.guildwars2.com/v2");
-
-            List<Specialization> specsToAdd = new List<Specialization>();
-            List<int> specIds = await guildWars2Api.GetSpecializationsAsync().ConfigureAwait(true);
-            Debug.WriteLine($"Got {specIds.Count} IDs");
-            foreach (var id in specIds)
-            {
-                Specialization spec = await guildWars2Api.GetSpecializationAsync(id).ConfigureAwait(true);
-                if (spec != null)
-                {
-                    Debug.WriteLine($"Adding {spec.Name} to the list.");
-                    specsToAdd.Add(spec);
-                }
-            }
-
-            using var writer = new StreamWriter(filePath);
-            var serializer = new JsonSerializer
-            {
-                NullValueHandling = NullValueHandling.Ignore,
-                Formatting = Formatting.None
-            };
-            serializer.Serialize(writer, specsToAdd);
-        }
-
-        public void ReadFromDatabase()
-        {
-            using DatabaseContext db = new DatabaseContext();
-            LogFiles.AddRange(db.ParsedLogFiles);
         }
 
         public async void BossFilterChanged(object sender, SelectionChangedEventArgs eventArgs)
@@ -394,13 +365,6 @@ namespace LogParser.ViewModels
             LogFiles.AddRange(filteredLogFiles);
         }
 
-        public async void GetGithubRepo()
-        {
-            IGitHubApi githubApi = RestClient.For<IGitHubApi>(@"https://api.github.com");
-            var repo = await githubApi.GetLatestRelease("baaron4", "GW2-Elite-Insights-Parser").ConfigureAwait(true);
-            Debug.WriteLine(repo);
-        }
-
         public void CheckVersion()
         {
             FileVersionInfo fileVersionInfo = ParseController.GetFileVersionInfo();
@@ -410,6 +374,40 @@ namespace LogParser.ViewModels
             }
 
             DisplayText = fileVersionInfo.ToString();
+        }
+
+        public async void FormData()
+        {
+            OpenFileDialog fileDialog = new OpenFileDialog()
+            {
+                Multiselect = false,
+                Filter = ".html|*.html;*.htm"
+            };
+            bool result = (bool)fileDialog.ShowDialog();
+
+            if (result)
+            {
+                string fileName = fileDialog.FileName;
+
+                IDpsReport testApi = RestClient.For<IDpsReport>(@"https://b.dps.report");
+                byte[] fileContent = await File.ReadAllBytesAsync(fileName).ConfigureAwait(true);
+                
+                using var multiPartContent = new MultipartFormDataContent("----myBoundary");
+                using var byteArrayContent = new ByteArrayContent(fileContent);
+
+                byteArrayContent.Headers.Add("Content-Type", "application/octet-stream");
+                multiPartContent.Add(byteArrayContent, "file", fileName);
+
+                try
+                {
+                    var test = testApi.UploadContent(multiPartContent);
+                    Debug.WriteLine(test);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                }
+            }
         }
 
         private void PopulateLogFile<T>(T logObject, string propertyName, object value)
@@ -457,6 +455,7 @@ namespace LogParser.ViewModels
         {
             using DatabaseContext db = new DatabaseContext();
             List<ParsedLogFile> parsedLogs = await db.ParsedLogFiles.ToListAsync().ConfigureAwait(true);
+            LogFiles.Clear();
             LogFiles.AddRange(parsedLogs);
         }
 
@@ -475,143 +474,5 @@ namespace LogParser.ViewModels
         {
             Progress = eventArgs.Progress;
         }
-
-        //private void ParseData(Stream stream)
-        //{
-        //    using var reader = new BinaryReader(stream, new System.Text.UTF8Encoding());
-        //    string buildVersion = GetString(stream, 12);
-
-        //    Debug.WriteLine($"Build Version: {buildVersion}");
-
-        //    byte revision = reader.ReadByte();
-        //    Debug.WriteLine($"Revision: {revision}");
-
-        //    var id = reader.ReadUInt16();
-        //    Debug.WriteLine($"ID: {id}");
-
-        //    SafeSkip(stream, 1);
-
-        //    // Agent Data
-        //    // 4 bytes: player count
-        //    int agentCount = reader.ReadInt32();
-        //    List<AgentData> agents = new List<AgentData>();
-
-        //    for (int i = 0; i < agentCount; i++)
-        //    {
-        //        AgentData agent = new AgentData
-        //        {
-        //            Agent = reader.ReadUInt64(),
-        //            Prof = reader.ReadUInt32(),
-        //            IsElite = reader.ReadUInt32(),
-        //            Toughness = reader.ReadUInt16(),
-        //            Concentration = reader.ReadUInt16(),
-        //            Healing = reader.ReadUInt16(),
-        //            HitboxWidth = reader.ReadUInt16(),
-        //            Condition = reader.ReadUInt16(),
-        //            HitboxHeight = reader.ReadUInt16(),
-        //            Name = GetString(stream, 68, false),
-        //        };
-
-        //        if (agent.IsElite == 0xFFFFFFFF)
-        //        {
-        //            if ((agent.Prof & 0xffff0000) == 0xffff0000)
-        //            {
-        //                Debug.WriteLine("Gadget");
-        //            }
-        //            else
-        //            {
-        //                Debug.WriteLine("NPC");
-        //            }
-        //        }
-
-        //        agents.Add(agent);
-        //    }
-
-        //    // Skill Data
-        //    // 4 bytes: player count
-        //    uint skillCount = reader.ReadUInt32();
-
-        //    List<SkillData> skills = new List<SkillData>();
-        //    // 68 bytes: each skill
-        //    for (int i = 0; i < skillCount; i++)
-        //    {
-        //        SkillData skill = new SkillData
-        //        {
-        //            SkillID = reader.ReadInt32(), // 4 bytes: Skill ID
-        //            Name = GetString(stream, 64), // 64 bytes: Skill Name
-        //        };
-
-        //        skills.Add(skill);
-        //    }
-
-        //    long cbtItemCount = (reader.BaseStream.Length - reader.BaseStream.Position) / 64;
-        //    List<CombatData> combats = new List<CombatData>();
-        //    for (long i = 0; i < cbtItemCount; i++)
-        //    {
-        //        CombatData combatData = new CombatData
-        //        {
-        //            Time = reader.ReadUInt64(),
-        //            SrcAgent = reader.ReadUInt64(),
-        //            DstAgent = reader.ReadUInt64(),
-        //            Value = reader.ReadInt32(),
-        //            BuffDmg = reader.ReadInt32(),
-        //            OverstackValue = reader.ReadUInt32(),
-        //            SkillID = reader.ReadUInt32(),
-        //            SrcInstID = reader.ReadUInt16(),
-        //            DstInstID = reader.ReadUInt16(),
-        //            SrcMasterInstID = reader.ReadUInt16(),
-        //            DstMasterInstID = reader.ReadUInt16(),
-        //            IFF = reader.ReadByte(),
-        //            Buff = reader.ReadByte(),
-        //            Result = reader.ReadByte(),
-        //            IsActivation = reader.ReadByte(),
-        //            IsBuffRemove = reader.ReadByte(),
-        //            IsNinety = reader.ReadByte(),
-        //            IsFifty = reader.ReadByte(),
-        //            IsMoving = reader.ReadByte(),
-        //            IsStateChange = reader.ReadByte(),
-        //            IsFlanking = reader.ReadByte(),
-        //            IsShields = reader.ReadByte(),
-        //            IsOffcycle = reader.ReadByte(),
-        //            Pad = reader.ReadUInt32(),
-        //        };
-
-        //        combats.Add(combatData);
-        //    }
-        //}
-
-        //private string GetString(Stream stream, int length, bool nullTerminated = true)
-        //{
-        //    byte[] bytes = new byte[length];
-        //    stream.Read(bytes, 0, length);
-        //    if (nullTerminated)
-        //    {
-        //        for (int i = 0; i < length; ++i)
-        //        {
-        //            if (bytes[i] == 0)
-        //            {
-        //                length = i;
-        //                break;
-        //            }
-        //        }
-        //    }
-        //    return System.Text.Encoding.UTF8.GetString(bytes, 0, length);
-        //}
-
-        //private void SafeSkip(Stream stream, long bytesToSkip)
-        //{
-        //    if (stream.CanSeek)
-        //    {
-        //        stream.Seek(bytesToSkip, SeekOrigin.Current);
-        //    }
-        //    else
-        //    {
-        //        while (bytesToSkip > 0)
-        //        {
-        //            stream.ReadByte();
-        //            --bytesToSkip;
-        //        }
-        //    }
-        //}
     }
 }

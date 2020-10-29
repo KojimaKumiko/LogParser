@@ -16,6 +16,10 @@ namespace LogParser
 {
     public class ParseController
     {
+        public ParseController()
+        {
+        }
+
         public static string BaseEIPath => @"EliteInsights";
         public static string BaseLogPath => @"Logs";
         public static string EliteInsightsExecutable => "GuildWars2EliteInsights.exe";
@@ -24,10 +28,6 @@ namespace LogParser
         public static string AssemblyLocation => Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
         public static event EventHandler<ProgressChangedEventArgs> ProgressChangedEvent;
-
-        public ParseController()
-        {
-        }
 
         /// <summary>
         /// Parses the files with the current installed version of Elite Insights.

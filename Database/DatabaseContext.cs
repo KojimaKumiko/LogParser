@@ -10,15 +10,21 @@ namespace Database
 
         public DbSet<ParsedLogFile> ParsedLogFiles { get; set; }
 
-        public DbSet<LogFile> LogFiles { get; set; }
+        //public DbSet<LogFile> LogFiles { get; set; }
 
         public DbSet<LogPlayer> LogPlayers { get; set; }
 
         public DbSet<DpsTarget> DpsTargets { get; set; }
 
+        public DbSet<Settings> Settings { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
+#if DEBUG
+            optionsBuilder.UseSqlServer(@"Server=(localdb)\MSSQLLocalDB;Integrated Security=true;Database=LogParser");
+#else
             optionsBuilder.UseSqlite(@"DataSource=database.db;");
+#endif
         }
 
         [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "The method is provied by Entity Framework Core and gets called by it.")]
