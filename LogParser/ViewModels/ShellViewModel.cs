@@ -25,6 +25,9 @@ namespace LogParser.ViewModels
                 case ViewType.SettingsViewModel:
                     ActivateItem(new SettingsViewModel());
                     break;
+                case ViewType.LeagueViewModel:
+                    ActivateItem(new LeagueViewModel());
+                    break;
                 default:
                     break;
             }

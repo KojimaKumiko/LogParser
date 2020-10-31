@@ -66,6 +66,15 @@
                     </MenuItem>
                     <MenuItem Header="Logger" Command="{s:Action SwitchView}" CommandParameter="{x:Static data:ViewType.LogParserViewModel}" />
                     <Separator />
+                    <MenuItem Header="League of Legends (LoL)">
+                        <MenuItem.Style>
+                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                <Setter Property="IsHitTestVisible" Value="False" />
+                            </Style>
+                        </MenuItem.Style>
+                    </MenuItem>
+                    <MenuItem Header="Overview" Command="{s:Action SwitchView}" CommandParameter="{x:Static data:ViewType.LeagueViewModel}" />
+                    <Separator />
                     <MenuItem Header="Settings" Command="{s:Action SwitchView}" CommandParameter="{x:Static data:ViewType.SettingsViewModel}" />
                 </Menu>
             </DockPanel>
