@@ -1,5 +1,4 @@
 ﻿using Database.Models;
-using Database.Models.Enums;
 using System;
 
 namespace Database
@@ -21,7 +20,8 @@ namespace Database
 
             if (shouldSeed)
             {
-                context.Settings.Add(new Settings { Name = SettingManager.DpsReport, Value = "False", DisplayOrder = 1, SettingsType = SettingsType.Boolean });
+                context.Settings.Add(new Setting { Name = SettingsManager.DpsReport, Value = "False" });
+                context.Settings.Add(new Setting { Name = SettingsManager.UserToken, Value = string.Empty });
                 context.SaveChanges();
             }
         }

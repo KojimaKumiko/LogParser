@@ -12,18 +12,20 @@ namespace Database
     /// <summary>
     /// Static class to manage the settings of the application.
     /// </summary>
-    public static class SettingManager
+    public static class SettingsManager
     {
         public static string DpsReport => "UploadToDpsReport";
 
-        public static async Task<List<Settings>> GetSettings(DatabaseContext context)
+        public static string UserToken => "UserToken";
+
+        public static async Task<List<Setting>> GetSettings(DatabaseContext context)
         {
             if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
 
-            List<Settings> settings = await context.Settings.ToListAsync().ConfigureAwait(false);
+            List<Setting> settings = await context.Settings.ToListAsync().ConfigureAwait(false);
             return settings;
         }
 
@@ -34,9 +36,21 @@ namespace Database
                 throw new ArgumentNullException(nameof(context));
             }
 
-            Settings setting = await context.Settings.SingleAsync(s => s.Name == DpsReport).ConfigureAwait(false);
+            Setting setting = await context.Settings.SingleAsync(s => s.Name == DpsReport).ConfigureAwait(false);
 
             return Convert.ToBoolean(setting.Value, CultureInfo.InvariantCulture);
+        }
+
+        public static async Task<string> GetUserTokenAsync(DatabaseContext context)
+        {
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            Setting setting = await context.Settings.SingleAsync(s => s.Name == UserToken).ConfigureAwait(false);
+
+            return setting.Value;
         }
 
         public static async Task UpdateSetting(DatabaseContext context, string value, string settingName)
@@ -56,7 +70,7 @@ namespace Database
                 throw new ArgumentNullException(nameof(settingName));
             }
 
-            Settings setting = await context.Settings.SingleOrDefaultAsync(s => s.Name == settingName).ConfigureAwait(false);
+            Setting setting = await context.Settings.SingleOrDefaultAsync(s => s.Name == settingName).ConfigureAwait(false);
 
             if (setting == null)
             {

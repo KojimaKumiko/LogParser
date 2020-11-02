@@ -284,7 +284,7 @@ namespace LogParser.ViewModels
 
             using DatabaseContext db = new DatabaseContext();
 
-            bool uploadToDpsReport = await SettingManager.GetDpsReportUploadAsync(db).ConfigureAwait(true);
+            bool uploadToDpsReport = await SettingsManager.GetDpsReportUploadAsync(db).ConfigureAwait(true);
 
             if (uploadToDpsReport)
             {

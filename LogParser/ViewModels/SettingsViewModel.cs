@@ -1,43 +1,48 @@
 ﻿using Database;
-using Database.Models;
-using Microsoft.EntityFrameworkCore;
 using Stylet;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Documents;
 
 namespace LogParser.ViewModels
 {
     public class SettingsViewModel : Screen
     {
+        private bool uploadDspReport;
+
+        private string userToken;
+
         public SettingsViewModel()
         {
-            Settings = new BindableCollection<Settings>();
             _ = LoadDataFromDatabase();
         }
 
-        public BindableCollection<Settings> Settings { get; private set; }
+        public bool UploadDpsReport
+        {
+            get { return uploadDspReport; }
+            set { SetAndNotify(ref uploadDspReport, value); }
+        }
+
+        public string UserToken
+        {
+            get { return userToken; }
+            set { SetAndNotify(ref userToken, value); }
+        }
 
         public async Task SaveSettings()
         {
             using DatabaseContext context = new DatabaseContext();
-            List<Settings> settings = await context.Settings.ToListAsync().ConfigureAwait(false);
 
-            foreach (var setting in settings)
-            {
-                setting.Value = Settings.First(s => s.Name.Equals(setting.Name, StringComparison.OrdinalIgnoreCase)).Value;
-            }
+            await SettingsManager.UpdateSetting(context, UploadDpsReport.ToString(), SettingsManager.DpsReport).ConfigureAwait(true);
+            await SettingsManager.UpdateSetting(context, UserToken, SettingsManager.UserToken).ConfigureAwait(true);
 
-            await context.SaveChangesAsync().ConfigureAwait(false);
+            await context.SaveChangesAsync().ConfigureAwait(true);
         }
 
         private async Task LoadDataFromDatabase()
         {
             using DatabaseContext context = new DatabaseContext();
-            var settings = await context.Settings.ToListAsync().ConfigureAwait(false);
-            Settings.AddRange(settings);
+
+            UploadDpsReport = await SettingsManager.GetDpsReportUploadAsync(context).ConfigureAwait(true);
+            UserToken = await SettingsManager.GetUserTokenAsync(context).ConfigureAwait(true);
         }
     }
 }

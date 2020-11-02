@@ -16,7 +16,7 @@ namespace Database
 
         public DbSet<DpsTarget> DpsTargets { get; set; }
 
-        public DbSet<Settings> Settings { get; set; }
+        public DbSet<Setting> Settings { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
