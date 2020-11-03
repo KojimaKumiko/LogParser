@@ -7,6 +7,7 @@
              xmlns:local="clr-namespace:LogParser.Views"
              xmlns:vm="clr-namespace:LogParser.ViewModels"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance vm:LogParserViewModel}"
              d:DesignHeight="450" d:DesignWidth="800">
@@ -36,11 +37,13 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" Margin="25 0 0 0">
-                <ComboBox ItemsSource="{Binding BossNameFilters}" SelectionChanged="{s:Action BossFilterChanged}" SelectedItem="{Binding SelectedBossFilter, UpdateSourceTrigger=PropertyChanged}" />
+                <ComboBox ItemsSource="{Binding BossNameFilters}" SelectionChanged="{s:Action BossFilterChanged}"
+                          SelectedItem="{Binding SelectedBossFilter, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
 
             <StackPanel Grid.Column="0" Grid.Row="1" Margin="10 10 0 0">
-                <DataGrid Name="LogGrid" AutoGenerateColumns="False" ItemsSource="{Binding LogFiles}" CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True">
+                <DataGrid Name="LogGrid" AutoGenerateColumns="False" ItemsSource="{Binding LogFiles}"
+                          CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True" IsSynchronizedWithCurrentItem="True">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Boss" Binding="{Binding BossName}" />
                         <DataGridTextColumn Header="Recorded by" Binding="{Binding RecordedBy}" />
@@ -48,7 +51,23 @@
                         <DataGridTextColumn Header="End Time" Binding="{Binding EndTime}" />
                         <DataGridTextColumn Header="Fight Duration" Binding="{Binding Duration}" />
                         <DataGridTextColumn Header="Killed" Binding="{Binding Success}" />
+                        <DataGridTemplateColumn x:Name="dpsReport" Header="Dps Report">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ContentControl Name="Content">
+                                        <Hyperlink Command="{s:Action OpenLink}" CommandParameter="{Binding}">
+                                            <TextBlock Name="Link" Text="{Binding Path=DataContext.DpsReportLink, ElementName=Content}" />
+                                        </Hyperlink>
+                                    </ContentControl>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
+                    <!--<behaviors:Interaction.Triggers>
+                        <behaviors:EventTrigger EventName="MouseDoubleClick" SourceObject="{Binding ElementName=LogGrid}">
+                            <behaviors:InvokeCommandAction Command="{Binding OpenLinkCommand}" CommandParameter="{Binding LogFiles/}" />
+                        </behaviors:EventTrigger>
+                    </behaviors:Interaction.Triggers>-->
                 </DataGrid>
             </StackPanel>
 
@@ -77,7 +96,6 @@
                 <Button Content="Open File" Command="{s:Action SetFile}"/>
                 <Button Content="Parse Files" Command="{s:Action ParseFiles}" />
                 <Button Content="{Binding UpdateEliteInsightsContent}" Command="{s:Action UpdateEliteInsights}" />
-                <Button Content="Test FormData" Command="{s:Action FormData}" />
             </StackPanel>
 
             <StackPanel Grid.Column="1" Grid.Row="2">

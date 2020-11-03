@@ -1,12 +1,11 @@
 ﻿using Database;
 using Database.Models;
+using LogParser.Controller;
 using LogParser.Models;
 using LogParser.Models.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Win32;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using RestEase;
 using Stylet;
 using System;
@@ -17,10 +16,10 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace LogParser.ViewModels
 {
@@ -44,11 +43,6 @@ namespace LogParser.ViewModels
 
         private bool installed;
 
-        /// <summary>
-        /// Maps the name of the class to a dictionary, which maps the name of the properties of the json to the properties of the class.
-        /// </summary>
-        private Dictionary<string, Dictionary<string, PropertyInfo>> JsonProperties { get; set; }
-
         public LogParserViewModel()
         {
             LogFiles = new BindableCollection<ParsedLogFile>();
@@ -57,7 +51,6 @@ namespace LogParser.ViewModels
             {
                 clearFilterText
             };
-            JsonProperties = new Dictionary<string, Dictionary<string, PropertyInfo>>();
 
             LogFiles.CollectionChanged += LogFilesCollectionChanged;
             FilesToParse.CollectionChanged += (o, e) => NotifyOfPropertyChange(nameof(CanParseFiles));
@@ -76,6 +69,8 @@ namespace LogParser.ViewModels
                 installed = true;
             }
 
+            //OpenLinkCommand = new RelayCommand<ParsedLogFile>((logFile) => OpenLink(logFile, false));
+
             _ = LoadDataFromDatabase();
         }
 
@@ -90,6 +85,8 @@ namespace LogParser.ViewModels
         public BindableCollection<string> BossNameFilters { get; private set; }
 
         public BindableCollection<string> FilesToParse { get; private set; }
+
+        public ICommand OpenLinkCommand { get; set; }
 
         public string DisplayText
         {
@@ -151,177 +148,48 @@ namespace LogParser.ViewModels
         public async Task ParseFiles()
         {
             Debug.WriteLine("Parse Files.");
-            List<string> parsedFiles = (await ParseController.ParseAsync(FilesToParse).ConfigureAwait(false)).ToList();
 
-            if (parsedFiles == null || parsedFiles.Count <= 0)
-            {
-                return;
-            }
+            using var dbContext = new DatabaseContext();
+            bool upload = await SettingsManager.GetDpsReportUploadAsync(dbContext).ConfigureAwait(true);
+            string userToken = await SettingsManager.GetUserTokenAsync(dbContext).ConfigureAwait(true);
 
             List<ParsedLogFile> parsedLogs = new List<ParsedLogFile>();
+            Task<DPSReport> uploadTask = null;
+            string htmlPath = Path.Combine(ParseController.AssemblyLocation, "Logs");
 
-            foreach (string file in parsedFiles.Where(p => p.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase)))
+            foreach (string file in FilesToParse)
             {
-                using StreamReader sr = File.OpenText(file);
-                using JsonReader reader = new JsonTextReader(sr);
-
-                string currentProp = string.Empty;
-                string[] propsToSkip = new string[]
+                if (upload)
                 {
-                    "targets",
-                    //"players",
-                    "phases",
-                    "mechanics",
-                    "uploadLinks",
-                    "skillMap",
-                    "buffMap",
-                    "damageModMap",
-                    "personalBuffs",
-                    "weapons",
-                    "targetDamage1S",
-                    "targetDamageDist",
-                    "statsTargets",
-                    "support",
-                    "damageModifiers",
-                    "damageModifiersTarget",
-                    "buffUptimes",
-                    "selfBuffs",
-                    "groupBuffs",
-                    "offGroupBuffs",
-                    "squadBuffs",
-                    "buffUptimesActive",
-                    "selfBuffsActive",
-                    "groupBuffsActive",
-                    "offGroupBuffsActive",
-                    "squadBuffsActive",
-                    "consumables",
-                    "activeTimes",
-                    "minions",
-                    "dpsAll",
-                    "statsAll",
-                    "defenses",
-                    "totalDamageDist",
-                    "totalDamageTaken",
-                    "rotation",
-                    "actorPowerDamage",
-                };
-
-                ParsedLogFile logFile = new ParsedLogFile();
-                logFile.Players = new List<LogPlayer>();
-
-                List<LogPlayer> logPlayers = new List<LogPlayer>();
-                LogPlayer logPlayer = new LogPlayer();
-
-                DpsTarget dpsTarget = new DpsTarget();
-
-                bool parseLogFile = true;
-                bool parsePlayers = false;
-                bool parseDpsTargets = false;
-
-                while (reader.Read())
-                {
-                    if (reader.Value != null)
-                    {
-                        if (reader.TokenType == JsonToken.PropertyName)
-                        {
-                            currentProp = reader.Value.ToString();
-
-                            if (currentProp.Equals("players", StringComparison.InvariantCultureIgnoreCase))
-                            {
-                                parsePlayers = true;
-                            }
-                            else if (currentProp.Equals("dpsTargets", StringComparison.InvariantCultureIgnoreCase))
-                            {
-                                parseDpsTargets = true;
-                            }
-                        }
-
-                        if (reader.TokenType != JsonToken.PropertyName)
-                        {
-                            if (parseLogFile)
-                            {
-                                PopulateLogFile(logFile, currentProp, reader.Value);
-                            }
-                            else if (parsePlayers)
-                            {
-                                if (parseDpsTargets)
-                                {
-                                    PopulateLogFile(dpsTarget, currentProp, reader.Value);
-                                }
-                                else
-                                {
-                                    PopulateLogFile(logPlayer, currentProp, reader.Value);
-                                }
-                            }
-                        }
-                    }
-                    else if ((reader.TokenType == JsonToken.StartArray || reader.TokenType == JsonToken.StartObject) && propsToSkip.Contains(currentProp))
-                    {
-                        reader.Skip();
-                        parseLogFile = false;
-
-                        if (currentProp.Equals("rotation", StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            logPlayer.DpsTargets = new List<DpsTarget> { dpsTarget };
-                            dpsTarget = new DpsTarget();
-
-                            logPlayers.Add(logPlayer);
-                            logPlayer = new LogPlayer();
-
-                            currentProp = string.Empty;
-                        }
-                    }
-                    else if (reader.TokenType == JsonToken.EndObject && currentProp.Equals("actorPowerDamage", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        parseDpsTargets = false;
-                    }
+                    // upload the file...
+                    uploadTask = DpsReportController.UploadToDpsReport(file, userToken);
                 }
 
-                logFile.Players.AddRange(logPlayers);
+                ParsedLogFile logFile = ParseController.ParseSingleFile(file, htmlPath);
+
+                ParseController.ClearLogFolder();
+
+                if (uploadTask != null)
+                {
+                    DPSReport report = await uploadTask.ConfigureAwait(true);
+
+                    if (report != null)
+                    {
+                        logFile.DpsReportLink = report.PermaLink;
+                    }
+                }
 
                 parsedLogs.Add(logFile);
             }
 
-            using DatabaseContext db = new DatabaseContext();
+            dbContext.ParsedLogFiles.AddRange(parsedLogs);
 
-            bool uploadToDpsReport = await SettingsManager.GetDpsReportUploadAsync(db).ConfigureAwait(true);
-
-            if (uploadToDpsReport)
-            {
-                IDpsReport dpsReportApi = RestClient.For<IDpsReport>(@"https://dps.report");
-
-                foreach (string file in FilesToParse)
-                {
-                    string fileName = file.Split("\\").Last();
-                    byte[] fileContent = await File.ReadAllBytesAsync(file).ConfigureAwait(true);
-
-                    using MultipartFormDataContent multiPartContent = new MultipartFormDataContent("----myBoundary");
-                    using ByteArrayContent byteArrayContent = new ByteArrayContent(fileContent);
-
-                    byteArrayContent.Headers.Add("Content-Type", "application/octet-stream");
-                    multiPartContent.Add(byteArrayContent, "file", fileName);
-
-                    try
-                    {
-                        var response = dpsReportApi.UploadContent(multiPartContent);
-                        Debug.WriteLine(response);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine(ex);
-                    }
-                }
-            }
-
-            db.ParsedLogFiles.AddRange(parsedLogs);
-
-            await db.SaveChangesAsync().ConfigureAwait(false);
-
-            //ParseController.ClearLogFolder();
+            await dbContext.SaveChangesAsync().ConfigureAwait(true);
             FilesToParse.Clear();
 
-            // load the new logs in
             await LoadDataFromDatabase().ConfigureAwait(true);
+
+            Debug.WriteLine("Done");
         }
 
         public async Task UpdateEliteInsights()
@@ -376,79 +244,14 @@ namespace LogParser.ViewModels
             DisplayText = fileVersionInfo.ToString();
         }
 
-        public async void FormData()
+        public void OpenLink(ParsedLogFile logFile)
         {
-            OpenFileDialog fileDialog = new OpenFileDialog()
+            if (logFile == null)
             {
-                Multiselect = false,
-                Filter = ".html|*.html;*.htm"
-            };
-            bool result = (bool)fileDialog.ShowDialog();
-
-            if (result)
-            {
-                string fileName = fileDialog.FileName;
-
-                IDpsReport testApi = RestClient.For<IDpsReport>(@"https://b.dps.report");
-                byte[] fileContent = await File.ReadAllBytesAsync(fileName).ConfigureAwait(true);
-                
-                using var multiPartContent = new MultipartFormDataContent("----myBoundary");
-                using var byteArrayContent = new ByteArrayContent(fileContent);
-
-                byteArrayContent.Headers.Add("Content-Type", "application/octet-stream");
-                multiPartContent.Add(byteArrayContent, "file", fileName);
-
-                try
-                {
-                    var test = testApi.UploadContent(multiPartContent);
-                    Debug.WriteLine(test);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(ex);
-                }
-            }
-        }
-
-        private void PopulateLogFile<T>(T logObject, string propertyName, object value)
-        {
-            var logType = logObject.GetType();
-            if (JsonProperties.Count <= 0 || !JsonProperties.ContainsKey(logType.Name))
-            {
-                var dictionary = new Dictionary<string, PropertyInfo>();
-                var properties = logType.GetProperties();
-
-                foreach (var prop in properties)
-                {
-                    JsonPropertyAttribute jsonPropertyAttribute = (JsonPropertyAttribute)Attribute.GetCustomAttribute(prop, typeof(JsonPropertyAttribute));
-                    if (jsonPropertyAttribute != null)
-                    {
-                        dictionary.Add(jsonPropertyAttribute.PropertyName, prop);
-                    }
-                }
-
-                JsonProperties.Add(logType.Name, dictionary);
+                throw new ArgumentNullException(nameof(logFile));
             }
 
-            JsonProperties.TryGetValue(logType.Name, out var jsonDictionary);
-
-            if (jsonDictionary == null)
-            {
-                return;
-            }
-
-            jsonDictionary.TryGetValue(propertyName, out var propInfo);
-            if (propInfo == null)
-            {
-                return;
-            }
-
-            if (propInfo.PropertyType == typeof(DateTime))
-            {
-                value = Convert.ToDateTime(value, CultureInfo.InvariantCulture);
-            }
-
-            propInfo.SetValue(logObject, value);
+            Process.Start("explorer", logFile.DpsReportLink);
         }
 
         private async Task LoadDataFromDatabase()

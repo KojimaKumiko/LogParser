@@ -51,7 +51,7 @@ namespace Database.Models
         [JsonProperty("isCM")]
         public bool IsCM { get; set; }
 
-        //public string DspReportLink { get; set; }
+        public string DpsReportLink { get; set; }
 
         public List<LogPlayer> Players { get; set; }
     }
