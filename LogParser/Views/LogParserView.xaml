@@ -42,8 +42,10 @@
             </StackPanel>
 
             <StackPanel Grid.Column="0" Grid.Row="1" Margin="10 10 0 0">
-                <DataGrid Name="LogGrid" AutoGenerateColumns="False" ItemsSource="{Binding LogFiles}"
-                          CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True" IsSynchronizedWithCurrentItem="True">
+                <DataGrid Name="LogGrid" ItemsSource="{Binding LogFiles}"
+                          AutoGenerateColumns="False"  CanUserAddRows="False" CanUserDeleteRows="False"
+                          IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow"
+                          IsSynchronizedWithCurrentItem="True">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Boss" Binding="{Binding BossName}" />
                         <DataGridTextColumn Header="Recorded by" Binding="{Binding RecordedBy}" />
@@ -96,6 +98,8 @@
                 <Button Content="Open File" Command="{s:Action SetFile}"/>
                 <Button Content="Parse Files" Command="{s:Action ParseFiles}" />
                 <Button Content="{Binding UpdateEliteInsightsContent}" Command="{s:Action UpdateEliteInsights}" />
+                <Button Content="Send to Discord" Command="{s:Action SendToDiscord}"
+                        CommandParameter="{Binding ElementName=LogGrid, Path=SelectedItems}" />
             </StackPanel>
 
             <StackPanel Grid.Column="1" Grid.Row="2">

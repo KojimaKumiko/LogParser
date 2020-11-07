@@ -1,5 +1,7 @@
 ﻿using LogParser.Models;
 using LogParser.Models.Interfaces;
+using Microsoft.Xaml.Behaviors.Media;
+using Newtonsoft.Json.Linq;
 using RestEase;
 using System;
 using System.Collections.Generic;
@@ -14,6 +16,8 @@ namespace LogParser.Controller
 {
     public class DpsReportController
     {
+        private static readonly Uri dpsReportUri = new Uri(@"https://dps.report");
+
         public DpsReportController()
         {
         }
@@ -25,7 +29,7 @@ namespace LogParser.Controller
                 throw new ArgumentNullException(nameof(file));
             }
 
-            IDpsReport dpsReportApi = RestClient.For<IDpsReport>(@"https://dps.report");
+            IDpsReport dpsReportApi = RestClient.For<IDpsReport>(dpsReportUri);
 
             string fileName = file.Split("\\").Last();
             byte[] fileContent = await File.ReadAllBytesAsync(file).ConfigureAwait(false);
@@ -38,7 +42,7 @@ namespace LogParser.Controller
 
             try
             {
-                var response = await dpsReportApi.UploadContent(multiPartContent).ConfigureAwait(false);
+                var response = await dpsReportApi.UploadContent(multiPartContent, userToken).ConfigureAwait(false);
                 Debug.WriteLine(response);
                 return response;
             }
@@ -47,6 +51,20 @@ namespace LogParser.Controller
                 Debug.WriteLine(ex);
                 return null;
             }
+        }
+
+        public static async Task<string> GetUserToken()
+        {
+            IDpsReport dpsReportApi = RestClient.For<IDpsReport>(dpsReportUri);
+            var response = await dpsReportApi.GetUserToken().ConfigureAwait(false);
+            
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                return string.Empty;
+            }
+
+            JObject job = JObject.Parse(response);
+            return job.Value<string>("userToken");
         }
     }
 }

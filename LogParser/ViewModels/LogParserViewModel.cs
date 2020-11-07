@@ -1,21 +1,19 @@
 ﻿using Database;
 using Database.Models;
+using Discord;
+using Discord.Webhook;
 using LogParser.Controller;
 using LogParser.Models;
-using LogParser.Models.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
-using Newtonsoft.Json;
-using RestEase;
 using Stylet;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Controls;
@@ -26,6 +24,8 @@ namespace LogParser.ViewModels
     public class LogParserViewModel : Screen
     {
         private const string DialogIdentifier = "RootDialogHost";
+
+        private readonly DatabaseContext dbContext;
 
         private readonly string clearFilterText = " --- NONE --- ";
 
@@ -43,8 +43,10 @@ namespace LogParser.ViewModels
 
         private bool installed;
 
-        public LogParserViewModel()
+        public LogParserViewModel(DatabaseContext dbContext)
         {
+            this.dbContext = dbContext;
+
             LogFiles = new BindableCollection<ParsedLogFile>();
             FilesToParse = new BindableCollection<string>();
             BossNameFilters = new BindableCollection<string>()
@@ -149,7 +151,6 @@ namespace LogParser.ViewModels
         {
             Debug.WriteLine("Parse Files.");
 
-            using var dbContext = new DatabaseContext();
             bool upload = await SettingsManager.GetDpsReportUploadAsync(dbContext).ConfigureAwait(true);
             string userToken = await SettingsManager.GetUserTokenAsync(dbContext).ConfigureAwait(true);
 
@@ -214,9 +215,7 @@ namespace LogParser.ViewModels
                 return;
             }
 
-            using DatabaseContext db = new DatabaseContext();
-
-            var logFiles = db.ParsedLogFiles.AsQueryable();
+            var logFiles = dbContext.ParsedLogFiles.AsQueryable();
 
             if (SelectedBossFilter.Equals(clearFilterText, StringComparison.InvariantCultureIgnoreCase))
             {
@@ -254,10 +253,59 @@ namespace LogParser.ViewModels
             Process.Start("explorer", logFile.DpsReportLink);
         }
 
+        public async Task SendToDiscord(System.Collections.IList selectedItems)
+        {
+            Task<string> discordWebhookUrlTask = SettingsManager.GetDiscordWebhookUrl(dbContext);
+
+            if (selectedItems == null || selectedItems.Count == 0)
+            {
+                string message = "Please select some Logs from the List above.";
+                var messageModel = new MessageViewModel(message);
+                await MaterialDesignThemes.Wpf.DialogHost.Show(messageModel, DialogIdentifier).ConfigureAwait(true);
+
+                return;
+            }
+
+            List<ParsedLogFile> selectedLogs = selectedItems.Cast<ParsedLogFile>().ToList();
+
+            string discordWebhookUrl = await discordWebhookUrlTask.ConfigureAwait(true);
+
+            if (string.IsNullOrWhiteSpace(discordWebhookUrl))
+            {
+                string message = "Please set a Webhook URL first in the Settings.";
+                var messageModel = new MessageViewModel(message);
+                await MaterialDesignThemes.Wpf.DialogHost.Show(messageModel, DialogIdentifier).ConfigureAwait(true);
+
+                return;
+            }
+
+            string discordWebhookName = await SettingsManager.GetDiscordWebhookName(dbContext).ConfigureAwait(true);
+
+            using var webhookClient = new DiscordWebhookClient(discordWebhookUrl);
+            var embedBuilder = new EmbedBuilder
+            {
+                Color = Color.DarkBlue,
+                Title = "Logs",
+            };
+
+            foreach (var log in selectedLogs)
+            {
+                string success = log.Success ? "Success - " : "Fail - ";
+                string value = log.DpsReportLink ?? " - ";
+                embedBuilder.AddField(success + log.BossName, value);
+            }
+
+            List<Embed> embeds = new List<Embed>
+            {
+                embedBuilder.Build(),
+            };
+
+            await webhookClient.SendMessageAsync(embeds: embeds, username: discordWebhookName).ConfigureAwait(false);
+        }
+
         private async Task LoadDataFromDatabase()
         {
-            using DatabaseContext db = new DatabaseContext();
-            List<ParsedLogFile> parsedLogs = await db.ParsedLogFiles.ToListAsync().ConfigureAwait(true);
+            List<ParsedLogFile> parsedLogs = await dbContext.ParsedLogFiles.AsQueryable().ToListAsync().ConfigureAwait(true);
             LogFiles.Clear();
             LogFiles.AddRange(parsedLogs);
         }

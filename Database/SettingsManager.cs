@@ -18,51 +18,74 @@ namespace Database
 
         public static string UserToken => "UserToken";
 
-        public static async Task<List<Setting>> GetSettings(DatabaseContext context)
+        public static string WebhookUrl => "DiscordWebhookUrl";
+
+        public static string WebhookName => "DiscordWebhookName";
+
+        public static async Task<List<Setting>> GetSettings(DatabaseContext dbContext)
         {
-            if (context == null)
+            if (dbContext == null)
             {
-                throw new ArgumentNullException(nameof(context));
+                throw new ArgumentNullException(nameof(dbContext));
             }
 
-            List<Setting> settings = await context.Settings.ToListAsync().ConfigureAwait(false);
+            List<Setting> settings = await dbContext.Settings.ToListAsync().ConfigureAwait(false);
             return settings;
         }
 
-        public static async Task<bool> GetDpsReportUploadAsync(DatabaseContext context)
+        public static async Task<bool> GetDpsReportUploadAsync(DatabaseContext dbContext)
         {
-            if (context == null)
+            if (dbContext == null)
             {
-                throw new ArgumentNullException(nameof(context));
+                throw new ArgumentNullException(nameof(dbContext));
             }
 
-            Setting setting = await context.Settings.SingleAsync(s => s.Name == DpsReport).ConfigureAwait(false);
+            Setting setting = await dbContext.Settings.SingleAsync(s => s.Name == DpsReport).ConfigureAwait(false);
 
             return Convert.ToBoolean(setting.Value, CultureInfo.InvariantCulture);
         }
 
-        public static async Task<string> GetUserTokenAsync(DatabaseContext context)
+        public static async Task<string> GetUserTokenAsync(DatabaseContext dbContext)
         {
-            if (context == null)
+            if (dbContext == null)
             {
-                throw new ArgumentNullException(nameof(context));
+                throw new ArgumentNullException(nameof(dbContext));
             }
 
-            Setting setting = await context.Settings.SingleAsync(s => s.Name == UserToken).ConfigureAwait(false);
+            Setting setting = await dbContext.Settings.SingleAsync(s => s.Name == UserToken).ConfigureAwait(false);
 
             return setting.Value;
         }
 
-        public static async Task UpdateSetting(DatabaseContext context, string value, string settingName)
+        public static async Task<string> GetDiscordWebhookUrl(DatabaseContext dbContext)
         {
-            if (context == null)
+            if (dbContext == null)
             {
-                throw new ArgumentNullException(nameof(context));
+                throw new ArgumentNullException(nameof(dbContext));
             }
 
-            if (string.IsNullOrWhiteSpace(value))
+            Setting setting = await dbContext.Settings.SingleAsync(s => s.Name == WebhookUrl).ConfigureAwait(false);
+
+            return setting.Value;
+        }
+
+        public static async Task<string> GetDiscordWebhookName(DatabaseContext dbContext)
+        {
+            if (dbContext == null)
             {
-                throw new ArgumentNullException(nameof(value));
+                throw new ArgumentNullException(nameof(dbContext));
+            }
+
+            Setting setting = await dbContext.Settings.SingleAsync(s => s.Name == WebhookName).ConfigureAwait(false);
+
+            return setting.Value;
+        }
+
+        public static async Task UpdateSetting(DatabaseContext dbContext, string value, string settingName)
+        {
+            if (dbContext == null)
+            {
+                throw new ArgumentNullException(nameof(dbContext));
             }
 
             if (string.IsNullOrWhiteSpace(settingName))
@@ -70,7 +93,7 @@ namespace Database
                 throw new ArgumentNullException(nameof(settingName));
             }
 
-            Setting setting = await context.Settings.SingleOrDefaultAsync(s => s.Name == settingName).ConfigureAwait(false);
+            Setting setting = await dbContext.Settings.SingleOrDefaultAsync(s => s.Name == settingName).ConfigureAwait(false);
 
             if (setting == null)
             {

@@ -22,6 +22,7 @@ namespace Database
             {
                 context.Settings.Add(new Setting { Name = SettingsManager.DpsReport, Value = "False" });
                 context.Settings.Add(new Setting { Name = SettingsManager.UserToken, Value = string.Empty });
+                context.Settings.Add(new Setting { Name = SettingsManager.WebhookUrl, Value = string.Empty });
                 context.SaveChanges();
             }
         }

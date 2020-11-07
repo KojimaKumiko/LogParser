@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using Database;
+using Microsoft.Win32;
 using Stylet;
 using System;
 using System.Diagnostics;
@@ -11,8 +12,14 @@ namespace LogParser.ViewModels
 {
     public class ShellViewModel : Conductor<IScreen>
     {
-        public ShellViewModel()
+        private readonly Func<LogParserViewModel> logParserFunc;
+
+        private readonly Func<SettingsViewModel> settingsFunc;
+
+        public ShellViewModel(Func<LogParserViewModel> logParserFunc, Func<SettingsViewModel> settingsFunc)
         {
+            this.logParserFunc = logParserFunc;
+            this.settingsFunc = settingsFunc;
         }
 
         public void SwitchView(ViewType viewType)
@@ -20,10 +27,10 @@ namespace LogParser.ViewModels
             switch (viewType)
             {
                 case ViewType.LogParserViewModel:
-                    ActivateItem(new LogParserViewModel());
+                    ActivateItem(logParserFunc());
                     break;
                 case ViewType.SettingsViewModel:
-                    ActivateItem(new SettingsViewModel());
+                    ActivateItem(settingsFunc());
                     break;
                 default:
                     break;

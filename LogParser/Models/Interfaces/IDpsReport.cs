@@ -12,12 +12,9 @@ namespace LogParser.Models.Interfaces
     public interface IDpsReport
     {
         [Post("uploadContent?json=1&generator=ei")]
-        Task<DPSReport> UploadContent([Body] HttpContent file/*, [Query] string userToken*/);
+        Task<DPSReport> UploadContent([Body] HttpContent file, [Query] string userToken);
 
-        [Post("values")]
-        Task<object> FormData([Body] HttpContent file);
-
-        [Get("values/{id}")]
-        Task<string> GetValues([Path] int id);
+        [Get("getUserToken")]
+        Task<string> GetUserToken();
     }
 }
