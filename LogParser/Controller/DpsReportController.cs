@@ -22,7 +22,7 @@ namespace LogParser.Controller
         {
         }
 
-        public static async Task<DPSReport> UploadToDpsReport(string file, string userToken)
+        public async Task<DPSReport> UploadToDpsReport(string file, string userToken)
         {
             if (string.IsNullOrWhiteSpace(file))
             {
@@ -53,7 +53,7 @@ namespace LogParser.Controller
             }
         }
 
-        public static async Task<string> GetUserToken()
+        public async Task<string> GetUserToken()
         {
             IDpsReport dpsReportApi = RestClient.For<IDpsReport>(dpsReportUri);
             var response = await dpsReportApi.GetUserToken().ConfigureAwait(false);

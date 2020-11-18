@@ -48,6 +48,8 @@
         <StackPanel Grid.Column="0" Grid.Row="0" Style="{DynamicResource ContainerStackPanel}">
             <CheckBox Content="{local:Loc UploadToDpsReport}" IsChecked="{Binding UploadDpsReport}"
                       FontSize="16" materialDesign:CheckBoxAssist.CheckBoxSize="24" />
+            <CheckBox Content="Post to Discord" IsChecked="{Binding PostToDiscord}"
+                      FontSize="16" materialDesign:CheckBoxAssist.CheckBoxSize="24" Margin="0 10 0 0" />
         </StackPanel>
 
         <StackPanel Grid.Column="1" Grid.Row="0" Style="{DynamicResource ContainerStackPanel}">

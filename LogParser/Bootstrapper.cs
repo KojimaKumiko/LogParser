@@ -1,4 +1,5 @@
 ﻿using Database;
+using LogParser.Controller;
 using LogParser.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -47,10 +48,12 @@ namespace LogParser
             // Configure the IoC container in here
             builder.Bind<IConfiguration>().ToInstance(configuration);
             builder.Bind<DatabaseContext>().ToInstance(database);
+            builder.Bind<ParseController>().ToSelf();
+            builder.Bind<DpsReportController>().ToSelf();
 
             // Factories for ViewModels
-            builder.Bind<LogParserViewModel>().ToFactory(c => new LogParserViewModel(c.Get<DatabaseContext>()));
-            builder.Bind<SettingsViewModel>().ToFactory(c => new SettingsViewModel(c.Get<DatabaseContext>()));
+            builder.Bind<LogParserViewModel>().ToFactory(c => new LogParserViewModel(c.Get<DatabaseContext>(), c.Get<ParseController>(), c.Get<DpsReportController>()));
+            builder.Bind<SettingsViewModel>().ToFactory(c => new SettingsViewModel(c.Get<DatabaseContext>(), c.Get<DpsReportController>()));
         }
 
         protected override void Configure()

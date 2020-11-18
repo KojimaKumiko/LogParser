@@ -13,15 +13,16 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace LogParser.Controller
 {
-    public static class ParseController
+    public class ParseController
     {
         private static Dictionary<string, Dictionary<string, PropertyInfo>> JsonProperties { get; }
             = new Dictionary<string, Dictionary<string, PropertyInfo>>();
 
-        static ParseController()
+        public ParseController()
         {
         }
 
@@ -39,7 +40,7 @@ namespace LogParser.Controller
         /// </summary>
         /// <param name="fileNames">The files to parse. The full path is required.</param>
         /// <returns>A list of strings containing the paths for the generated .json and .html files for each parsed file.</returns>
-        public static ParsedLogFile ParseSingleFile(string fileName, string htmlPath)
+        public async Task<ParsedLogFile> ParseSingleFile(string fileName, string htmlPath)
         {
             if (string.IsNullOrWhiteSpace(fileName))
             {
@@ -59,7 +60,7 @@ namespace LogParser.Controller
                 Directory.CreateDirectory(logPath);
             }
 
-            IEnumerable<string> parsedFiles = ParseFile(fileName, path, logPath);
+            IEnumerable<string> parsedFiles = await ParseFile(fileName, path, logPath).ConfigureAwait(false);
 
             string jsonFile = parsedFiles.First(f => f.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase));
             using StreamReader sr = File.OpenText(jsonFile);
@@ -118,7 +119,7 @@ namespace LogParser.Controller
             bool parsePlayers = false;
             bool parseDpsTargets = false;
 
-            while (reader.Read())
+            while (await reader.ReadAsync().ConfigureAwait(false))
             {
                 if (reader.Value != null)
                 {
@@ -126,11 +127,11 @@ namespace LogParser.Controller
                     {
                         currentProp = reader.Value.ToString();
 
-                        if (currentProp.Equals("players", StringComparison.InvariantCultureIgnoreCase))
+                        if (currentProp.Equals("players", StringComparison.OrdinalIgnoreCase))
                         {
                             parsePlayers = true;
                         }
-                        else if (currentProp.Equals("dpsTargets", StringComparison.InvariantCultureIgnoreCase))
+                        else if (currentProp.Equals("dpsTargets", StringComparison.OrdinalIgnoreCase))
                         {
                             parseDpsTargets = true;
                         }
@@ -157,10 +158,10 @@ namespace LogParser.Controller
                 }
                 else if ((reader.TokenType == JsonToken.StartArray || reader.TokenType == JsonToken.StartObject) && propsToSkip.Contains(currentProp))
                 {
-                    reader.Skip();
+                    Task skipTask = reader.SkipAsync();
                     parseLogFile = false;
 
-                    if (currentProp.Equals("rotation", StringComparison.InvariantCultureIgnoreCase))
+                    if (currentProp.Equals("rotation", StringComparison.OrdinalIgnoreCase))
                     {
                         logPlayer.DpsTargets = new List<DpsTarget> { dpsTarget };
                         dpsTarget = new DpsTarget();
@@ -170,11 +171,18 @@ namespace LogParser.Controller
 
                         currentProp = string.Empty;
                     }
+
+                    await skipTask.ConfigureAwait(false);
                 }
-                else if (reader.TokenType == JsonToken.EndObject && currentProp.Equals("actorPowerDamage", StringComparison.InvariantCultureIgnoreCase))
+                else if (reader.TokenType == JsonToken.EndObject && currentProp.Equals("actorPowerDamage", StringComparison.OrdinalIgnoreCase))
                 {
                     parseDpsTargets = false;
                 }
+            }
+
+            if (!Directory.Exists(htmlPath))
+            {
+                Directory.CreateDirectory(htmlPath);
             }
 
             string htmlFile = parsedFiles.First(f => f.EndsWith(".html", StringComparison.InvariantCultureIgnoreCase));
@@ -187,7 +195,7 @@ namespace LogParser.Controller
             return logFile;
         }
 
-        public static bool IsInstalled()
+        public bool IsInstalled()
         {
             string path = Path.Combine(AssemblyLocation, BaseEIPath);
             if (!Directory.Exists(path))
@@ -200,7 +208,7 @@ namespace LogParser.Controller
             return File.Exists(path);
         }
 
-        public static FileVersionInfo GetFileVersionInfo()
+        public FileVersionInfo GetFileVersionInfo()
         {
             if (!IsInstalled())
             {
@@ -212,10 +220,10 @@ namespace LogParser.Controller
             return FileVersionInfo.GetVersionInfo(path);
         }
 
-        public async static Task<Install> InstallEliteInsights()
+        public async Task<Install> InstallEliteInsights()
         {
-            IGitHubApi githubApi = RestClient.For<IGitHubApi>(@"https://api.github.com");
-            var repo = await githubApi.GetLatestRelease("baaron4", "GW2-Elite-Insights-Parser").ConfigureAwait(true);
+            IGitHubApi githubApi = RestClient.For<IGitHubApi>(new Uri(@"https://api.github.com"));
+            var repo = await githubApi.GetLatestRelease("baaron4", "GW2-Elite-Insights-Parser").ConfigureAwait(false);
             if (repo == null)
             {
                 return Install.Error;
@@ -227,7 +235,7 @@ namespace LogParser.Controller
                 return Install.UpToDate;
             }
 
-            var asset = repo.Assets.FirstOrDefault(a => a.Name.Equals("GW2EI.zip", StringComparison.InvariantCulture));
+            var asset = repo.Assets.FirstOrDefault(a => a.Name.Equals("GW2EI.zip", StringComparison.Ordinal));
             if (asset == null)
             {
                 return Install.Error;
@@ -255,7 +263,7 @@ namespace LogParser.Controller
             return Install.Success;
         }
 
-        public static void ClearLogFolder()
+        public void ClearLogFolder()
         {
             string logFolder = Path.Combine(AssemblyLocation, LogPath);
             if (!Directory.Exists(logFolder))
@@ -266,12 +274,12 @@ namespace LogParser.Controller
             Directory.Delete(logFolder, true);
         }
 
-        private static void OnRaiseProgressChangedEvent(int progress)
+        private void OnRaiseProgressChangedEvent(int progress)
         {
             ProgressChangedEvent?.Invoke(null, new ProgressChangedEventArgs(progress));
         }
 
-        private static string GetConfig(string path)
+        private string GetConfig(string path)
         {
             string defaultConfig = Path.Combine(AssemblyLocation, EliteInsightsConfig);
             string destConfig = Path.Combine(path, "EIConfig.conf");
@@ -283,7 +291,7 @@ namespace LogParser.Controller
             return destConfig;
         }
 
-        private static IEnumerable<string> ParseFile(string fileName, string eiPath, string logPath)
+        private async Task<IEnumerable<string>> ParseFile(string fileName, string eiPath, string logPath)
         {
             string config = GetConfig(eiPath);
             string args = $"-p -c \"{config}\" \"{fileName}\"";
@@ -303,14 +311,19 @@ namespace LogParser.Controller
             };
 
             // Start the process and wait for it until it's finished.
-            process.Start();
-            process.WaitForExit();
-            process.Close();
+            Task processTask = Task.Run(() =>
+            {
+                process.Start();
+                process.WaitForExit();
+                process.Close();
+            });
+
+            await processTask.ConfigureAwait(false);
 
             return Directory.EnumerateFiles(logPath);
         }
 
-        private static void PopulateLogFile<T>(T logObject, string propertyName, object value)
+        private void PopulateLogFile<T>(T logObject, string propertyName, object value)
         {
             var logType = logObject.GetType();
             if (JsonProperties.Count <= 0 || !JsonProperties.ContainsKey(logType.Name))

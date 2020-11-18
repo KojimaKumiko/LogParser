@@ -11,7 +11,7 @@
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance vm:LogParserViewModel}"
              d:DesignHeight="450" d:DesignWidth="800">
-    <materialDesign:DialogHost Identifier="RootDialogHost" CloseOnClickAway="True">
+    <materialDesign:DialogHost Identifier="RootDialogHost" DialogTheme="Inherit">
         <materialDesign:DialogHost.DialogContentTemplate>
             <DataTemplate>
                 <DataTemplate.Resources>
@@ -20,6 +20,9 @@
                             <TextBlock Text="{Binding Message}" Margin="0, 10, 0, 0" HorizontalAlignment="Center" DockPanel.Dock="Top" FontSize="16" />
                             <Button Content="Close" Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}" DockPanel.Dock="Bottom" VerticalAlignment="Bottom" />
                         </DockPanel>
+                    </DataTemplate>
+                    <DataTemplate DataType="{x:Type vm:LogDetailsViewModel}">
+                        <local:LogDetailsView />
                     </DataTemplate>
                 </DataTemplate.Resources>
                 <ContentControl Content="{Binding}" />
@@ -41,51 +44,52 @@
                           SelectedItem="{Binding SelectedBossFilter, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
 
-            <StackPanel Grid.Column="0" Grid.Row="1" Margin="10 10 0 0">
-                <DataGrid Name="LogGrid" ItemsSource="{Binding LogFiles}"
-                          AutoGenerateColumns="False"  CanUserAddRows="False" CanUserDeleteRows="False"
-                          IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow"
-                          IsSynchronizedWithCurrentItem="True">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Boss" Binding="{Binding BossName}" />
-                        <DataGridTextColumn Header="Recorded by" Binding="{Binding RecordedBy}" />
-                        <DataGridTextColumn Header="Start Time" Binding="{Binding StartTime}" />
-                        <DataGridTextColumn Header="End Time" Binding="{Binding EndTime}" />
-                        <DataGridTextColumn Header="Fight Duration" Binding="{Binding Duration}" />
-                        <DataGridTextColumn Header="Killed" Binding="{Binding Success}" />
-                        <DataGridTemplateColumn x:Name="dpsReport" Header="Dps Report">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <ContentControl Name="Content">
-                                        <Hyperlink Command="{s:Action OpenLink}" CommandParameter="{Binding}">
-                                            <TextBlock Name="Link" Text="{Binding Path=DataContext.DpsReportLink, ElementName=Content}" />
-                                        </Hyperlink>
-                                    </ContentControl>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                    <!--<behaviors:Interaction.Triggers>
-                        <behaviors:EventTrigger EventName="MouseDoubleClick" SourceObject="{Binding ElementName=LogGrid}">
-                            <behaviors:InvokeCommandAction Command="{Binding OpenLinkCommand}" CommandParameter="{Binding LogFiles/}" />
-                        </behaviors:EventTrigger>
-                    </behaviors:Interaction.Triggers>-->
-                </DataGrid>
-            </StackPanel>
+            <DataGrid Name="LogGrid" Grid.Column="0" Grid.Row="1" Margin="10 10 0 0" ItemsSource="{Binding LogFiles}"
+                      AutoGenerateColumns="False"  CanUserAddRows="False" CanUserDeleteRows="False"
+                      IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow"
+                      IsSynchronizedWithCurrentItem="True" GridLinesVisibility="All">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Boss" Binding="{Binding BossName}" />
+                    <DataGridTextColumn Header="Recorded by" Binding="{Binding RecordedBy}" />
+                    <DataGridTextColumn Header="Start Time" Binding="{Binding StartTime}" />
+                    <DataGridTextColumn Header="End Time" Binding="{Binding EndTime}" />
+                    <DataGridTextColumn Header="Fight Duration" Binding="{Binding Duration}" />
+                    <DataGridTextColumn Header="Killed" Binding="{Binding Success}" />
+                    <DataGridTemplateColumn x:Name="dpsReport" Header="Dps Report">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <ContentControl Name="Content">
+                                    <Hyperlink Command="{s:Action OpenLink}" CommandParameter="{Binding}">
+                                        <TextBlock Name="Link" Text="{Binding Path=DataContext.DpsReportLink, ElementName=Content}" />
+                                    </Hyperlink>
+                                </ContentControl>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+                <behaviors:Interaction.Triggers>
+                    <behaviors:EventTrigger EventName="MouseDoubleClick" SourceObject="{Binding ElementName=LogGrid}">
+                        <behaviors:InvokeCommandAction Command="{Binding ShowDetailsCommand}" CommandParameter="{Binding LogFiles/}" />
+                    </behaviors:EventTrigger>
+                </behaviors:Interaction.Triggers>
+            </DataGrid>
 
-            <StackPanel Grid.Column="1" Grid.Row="1" Margin="10 10 10 0">
-                <DataGrid x:Name="FileGrid"
-                          AutoGenerateColumns="False"
-                          ItemsSource="{Binding FilesToParse}"
-                          CanUserAddRows="False"
-                          CanUserDeleteRows="False"
-                          IsReadOnly="True"
-                          Visibility="{Binding FileGridVisible, Converter={x:Static s:BoolToVisibilityConverter.Instance}}">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="File" Binding="{Binding}" />
-                    </DataGrid.Columns>
-                </DataGrid>
-            </StackPanel>
+            <DataGrid x:Name="FileGrid" Grid.Column="1" Grid.Row="1" Margin="10 10 10 0"
+                      AutoGenerateColumns="False" ItemsSource="{Binding FilesToParse}"
+                      CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
+                      Visibility="{Binding CanParseFiles, Converter={x:Static s:BoolToVisibilityConverter.Instance}}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="File" Binding="{Binding}" />
+                    <DataGridTemplateColumn x:Name="removeFile">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="X" FontSize="13" Height="25" HorizontalAlignment="Left"
+                                        Command="{s:Action RemoveFile}" CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal">
                 <StackPanel.Resources>
@@ -96,21 +100,21 @@
                     </Style>
                 </StackPanel.Resources>
                 <Button Content="Open File" Command="{s:Action SetFile}"/>
-                <Button Content="Parse Files" Command="{s:Action ParseFiles}" />
+                <Button Content="Parse Files" Command="{s:Action ParseFilesAsync}" />
                 <Button Content="{Binding UpdateEliteInsightsContent}" Command="{s:Action UpdateEliteInsights}" />
                 <Button Content="Send to Discord" Command="{s:Action SendToDiscord}"
                         CommandParameter="{Binding ElementName=LogGrid, Path=SelectedItems}" />
             </StackPanel>
 
-            <StackPanel Grid.Column="1" Grid.Row="2">
+            <StackPanel Grid.Column="1" Grid.Row="2" Margin="10 10 0 0">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Elite Insights Version: " />
                     <TextBlock Text="{Binding EliteInsightsVersion}" />
                 </StackPanel>
 
                 <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}"
-                         VerticalAlignment="Center" Margin="10" Height="10"
-                         Visibility="{Binding ShowProgressBar, Converter={x:Static s:BoolToVisibilityConverter.Instance}}" />
+                             VerticalAlignment="Center" Margin="10" Height="10"
+                             Visibility="{Binding ShowProgressBar, Converter={x:Static s:BoolToVisibilityConverter.Instance}}" />
             </StackPanel>
         </Grid>
     </materialDesign:DialogHost>

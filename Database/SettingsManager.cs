@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -21,6 +22,8 @@ namespace Database
         public static string WebhookUrl => "DiscordWebhookUrl";
 
         public static string WebhookName => "DiscordWebhookName";
+
+        public static string PostDiscord => "PostToDiscord";
 
         public static async Task<List<Setting>> GetSettings(DatabaseContext dbContext)
         {
@@ -79,6 +82,18 @@ namespace Database
             Setting setting = await dbContext.Settings.SingleAsync(s => s.Name == WebhookName).ConfigureAwait(false);
 
             return setting.Value;
+        }
+
+        public static async Task<bool> GetPostToDiscord(DatabaseContext dbContext)
+        {
+            if (dbContext == null)
+            {
+                throw new ArgumentNullException(nameof(dbContext));
+            }
+
+            Setting setting = await dbContext.Settings.SingleAsync(s => s.Name == PostDiscord).ConfigureAwait(false);
+
+            return Convert.ToBoolean(setting.Value, CultureInfo.InvariantCulture);
         }
 
         public static async Task UpdateSetting(DatabaseContext dbContext, string value, string settingName)

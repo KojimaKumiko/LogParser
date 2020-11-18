@@ -9,7 +9,6 @@ using Microsoft.Win32;
 using Stylet;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
@@ -27,6 +26,10 @@ namespace LogParser.ViewModels
 
         private readonly DatabaseContext dbContext;
 
+        private readonly ParseController parseController;
+
+        private readonly DpsReportController dpsReportController;
+
         private readonly string clearFilterText = " --- NONE --- ";
 
         private string selectedBossFilter;
@@ -37,15 +40,17 @@ namespace LogParser.ViewModels
 
         private string updateEliteInsightsContent;
 
-        private int progress;
+        private double progress;
 
         private bool showProgressBar;
 
         private bool installed;
 
-        public LogParserViewModel(DatabaseContext dbContext)
+        public LogParserViewModel(DatabaseContext dbContext, ParseController parseController, DpsReportController dpsReportController)
         {
-            this.dbContext = dbContext;
+            this.dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+            this.parseController = parseController ?? throw new ArgumentNullException(nameof(parseController));
+            this.dpsReportController = dpsReportController ?? throw new ArgumentNullException(nameof(dpsReportController));
 
             LogFiles = new BindableCollection<ParsedLogFile>();
             FilesToParse = new BindableCollection<string>();
@@ -57,7 +62,7 @@ namespace LogParser.ViewModels
             LogFiles.CollectionChanged += LogFilesCollectionChanged;
             FilesToParse.CollectionChanged += (o, e) => NotifyOfPropertyChange(nameof(CanParseFiles));
 
-            var fileVersion = ParseController.GetFileVersionInfo();
+            var fileVersion = parseController.GetFileVersionInfo();
             if (fileVersion == null)
             {
                 EliteInsightsVersion = "Not Installed";
@@ -71,7 +76,8 @@ namespace LogParser.ViewModels
                 installed = true;
             }
 
-            //OpenLinkCommand = new RelayCommand<ParsedLogFile>((logFile) => OpenLink(logFile, false));
+            ShowDetailsCommand = new RelayCommand<ParsedLogFile>(async (logFile) => await ShowDetails(logFile).ConfigureAwait(true));
+            ShowProgressBar = true;
 
             _ = LoadDataFromDatabase();
         }
@@ -88,7 +94,7 @@ namespace LogParser.ViewModels
 
         public BindableCollection<string> FilesToParse { get; private set; }
 
-        public ICommand OpenLinkCommand { get; set; }
+        public ICommand ShowDetailsCommand { get; set; }
 
         public string DisplayText
         {
@@ -114,7 +120,7 @@ namespace LogParser.ViewModels
             set { SetAndNotify(ref updateEliteInsightsContent, value); }
         }
 
-        public int Progress
+        public double Progress
         {
             get { return progress; }
             set { SetAndNotify(ref progress, value); }
@@ -147,57 +153,40 @@ namespace LogParser.ViewModels
             }
         }
 
-        public async Task ParseFiles()
+        public async Task ParseFilesAsync()
         {
             Debug.WriteLine("Parse Files.");
 
-            bool upload = await SettingsManager.GetDpsReportUploadAsync(dbContext).ConfigureAwait(true);
-            string userToken = await SettingsManager.GetUserTokenAsync(dbContext).ConfigureAwait(true);
+            Progress = 0;
 
             List<ParsedLogFile> parsedLogs = new List<ParsedLogFile>();
-            Task<DPSReport> uploadTask = null;
-            string htmlPath = Path.Combine(ParseController.AssemblyLocation, "Logs");
 
-            foreach (string file in FilesToParse)
-            {
-                if (upload)
-                {
-                    // upload the file...
-                    uploadTask = DpsReportController.UploadToDpsReport(file, userToken);
-                }
-
-                ParsedLogFile logFile = ParseController.ParseSingleFile(file, htmlPath);
-
-                ParseController.ClearLogFolder();
-
-                if (uploadTask != null)
-                {
-                    DPSReport report = await uploadTask.ConfigureAwait(true);
-
-                    if (report != null)
-                    {
-                        logFile.DpsReportLink = report.PermaLink;
-                    }
-                }
-
-                parsedLogs.Add(logFile);
-            }
+            await ParseLogFilesAsync(parsedLogs).ConfigureAwait(true);
 
             dbContext.ParsedLogFiles.AddRange(parsedLogs);
 
             await dbContext.SaveChangesAsync().ConfigureAwait(true);
             FilesToParse.Clear();
 
-            await LoadDataFromDatabase().ConfigureAwait(true);
+            LogFiles.AddRange(parsedLogs);
 
+            Progress += 20;
+
+            bool postToDiscord = await SettingsManager.GetPostToDiscord(dbContext).ConfigureAwait(true);
+            if (postToDiscord)
+            {
+                await SendToDiscord(parsedLogs).ConfigureAwait(true);
+            }
+
+            Progress += 5;
             Debug.WriteLine("Done");
         }
 
         public async Task UpdateEliteInsights()
         {
-            await ParseController.InstallEliteInsights().ConfigureAwait(true);
+            await parseController.InstallEliteInsights().ConfigureAwait(true);
 
-            var fileVersion = ParseController.GetFileVersionInfo();
+            var fileVersion = parseController.GetFileVersionInfo();
             EliteInsightsVersion = fileVersion.FileVersion;
             UpdateEliteInsightsContent = "Update Elite Insights";
 
@@ -226,7 +215,7 @@ namespace LogParser.ViewModels
                 logFiles = logFiles.Where(l => l.BossName == SelectedBossFilter);
             }
 
-            var filteredLogFiles = await logFiles.ToListAsync().ConfigureAwait(true);
+            var filteredLogFiles = await logFiles.OrderBy(l => l.StartTime).ToListAsync().ConfigureAwait(true);
 
             LogFiles.Clear();
             LogFiles.AddRange(filteredLogFiles);
@@ -234,7 +223,7 @@ namespace LogParser.ViewModels
 
         public void CheckVersion()
         {
-            FileVersionInfo fileVersionInfo = ParseController.GetFileVersionInfo();
+            FileVersionInfo fileVersionInfo = parseController.GetFileVersionInfo();
             if (fileVersionInfo == null)
             {
                 DisplayText = "EI is not installed";
@@ -280,6 +269,7 @@ namespace LogParser.ViewModels
             }
 
             string discordWebhookName = await SettingsManager.GetDiscordWebhookName(dbContext).ConfigureAwait(true);
+            discordWebhookName = string.IsNullOrWhiteSpace(discordWebhookName) ? string.Empty : discordWebhookName;
 
             using var webhookClient = new DiscordWebhookClient(discordWebhookUrl);
             var embedBuilder = new EmbedBuilder
@@ -288,11 +278,13 @@ namespace LogParser.ViewModels
                 Title = "Logs",
             };
 
+            selectedLogs = selectedLogs.OrderBy(l => l.StartTime).ToList();
+
             foreach (var log in selectedLogs)
             {
-                string success = log.Success ? "Success - " : "Fail - ";
+                string success = log.Success ? "  -  :white_check_mark:" : "  -  :x:";
                 string value = log.DpsReportLink ?? " - ";
-                embedBuilder.AddField(success + log.BossName, value);
+                embedBuilder.AddField(log.BossName + success, value);
             }
 
             List<Embed> embeds = new List<Embed>
@@ -303,9 +295,21 @@ namespace LogParser.ViewModels
             await webhookClient.SendMessageAsync(embeds: embeds, username: discordWebhookName).ConfigureAwait(false);
         }
 
+        public void RemoveFile(string file)
+        {
+            FilesToParse.Remove(file);
+        }
+
+        public async Task ShowDetails(ParsedLogFile logFile)
+        {
+            var viewModel = new LogDetailsViewModel() { Test = logFile.BossName };
+            await MaterialDesignThemes.Wpf.DialogHost.Show(viewModel, DialogIdentifier).ConfigureAwait(true);
+        }
+
         private async Task LoadDataFromDatabase()
         {
-            List<ParsedLogFile> parsedLogs = await dbContext.ParsedLogFiles.AsQueryable().ToListAsync().ConfigureAwait(true);
+            var orderedLogs = dbContext.ParsedLogFiles.AsQueryable().OrderBy(l => l.StartTime);
+            List<ParsedLogFile> parsedLogs = await orderedLogs.ToListAsync().ConfigureAwait(true);
             LogFiles.Clear();
             LogFiles.AddRange(parsedLogs);
         }
@@ -324,6 +328,47 @@ namespace LogParser.ViewModels
         private void HandleProgressChangedEvent(object sender, ProgressChangedEventArgs eventArgs)
         {
             Progress = eventArgs.Progress;
+        }
+
+        private async Task ParseLogFilesAsync(List<ParsedLogFile> parsedLogs)
+        {
+            const double progressIncrement = 25;
+            const double parseIncrement = 50;
+            bool upload = await SettingsManager.GetDpsReportUploadAsync(dbContext).ConfigureAwait(false);
+            string userToken = await SettingsManager.GetUserTokenAsync(dbContext).ConfigureAwait(false);
+
+            string htmlPath = Path.Combine(ParseController.AssemblyLocation, "Logs");
+
+            Task<DPSReport> uploadTask = null;
+
+            foreach (string file in FilesToParse)
+            {
+                if (upload)
+                {
+                    // upload the file...
+                    uploadTask = dpsReportController.UploadToDpsReport(file, userToken);
+                }
+
+                ParsedLogFile logFile = await parseController.ParseSingleFile(file, htmlPath).ConfigureAwait(false);
+
+                Progress += parseIncrement / FilesToParse.Count;
+
+                parseController.ClearLogFolder();
+
+                if (uploadTask != null)
+                {
+                    DPSReport report = await uploadTask.ConfigureAwait(false);
+
+                    if (report != null)
+                    {
+                        logFile.DpsReportLink = report.PermaLink;
+                    }
+                }
+
+                parsedLogs.Add(logFile);
+
+                Progress += progressIncrement / FilesToParse.Count;
+            }
         }
     }
 }

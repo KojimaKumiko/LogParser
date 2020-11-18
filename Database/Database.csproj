@@ -1,7 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
+    <OutputType>Library</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,16 +16,6 @@
     <Compile Remove="Migrations\20200809205153_Added_Log_File_Table.Designer.cs" />
     <Compile Remove="Migrations\20200809205305_Added_Log_File_Table.cs" />
     <Compile Remove="Migrations\20200809205305_Added_Log_File_Table.Designer.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="SeedData\20200717-195820_vg_kill.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="SeedData\20200717-195820_vg_kill.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>

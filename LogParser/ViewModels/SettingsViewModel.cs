@@ -1,6 +1,7 @@
 ﻿using Database;
 using LogParser.Controller;
 using Stylet;
+using System;
 using System.Threading.Tasks;
 
 namespace LogParser.ViewModels
@@ -9,7 +10,11 @@ namespace LogParser.ViewModels
     {
         private readonly DatabaseContext dbContext;
 
+        private readonly DpsReportController dpsReportController;
+
         private bool uploadDspReport;
+
+        private bool postToDiscord;
 
         private string userToken;
 
@@ -17,9 +22,10 @@ namespace LogParser.ViewModels
 
         private string webhookName;
 
-        public SettingsViewModel(DatabaseContext dbContext)
+        public SettingsViewModel(DatabaseContext dbContext, DpsReportController dpsReportController)
         {
-            this.dbContext = dbContext;
+            this.dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+            this.dpsReportController = dpsReportController ?? throw new ArgumentNullException(nameof(dpsReportController));
 
             _ = LoadDataFromDatabase();
         }
@@ -28,6 +34,12 @@ namespace LogParser.ViewModels
         {
             get { return uploadDspReport; }
             set { SetAndNotify(ref uploadDspReport, value); }
+        }
+
+        public bool PostToDiscord
+        {
+            get { return postToDiscord; }
+            set { SetAndNotify(ref postToDiscord, value); }
         }
 
         public string UserToken
@@ -50,12 +62,13 @@ namespace LogParser.ViewModels
 
         public async Task GenerateToken()
         {
-            UserToken = await DpsReportController.GetUserToken().ConfigureAwait(true);
+            UserToken = await dpsReportController.GetUserToken().ConfigureAwait(true);
         }
 
         public async Task SaveSettings()
         {
             await SettingsManager.UpdateSetting(dbContext, UploadDpsReport.ToString(), SettingsManager.DpsReport).ConfigureAwait(true);
+            await SettingsManager.UpdateSetting(dbContext, PostToDiscord.ToString(), SettingsManager.PostDiscord).ConfigureAwait(true);
             await SettingsManager.UpdateSetting(dbContext, UserToken, SettingsManager.UserToken).ConfigureAwait(true);
             await SettingsManager.UpdateSetting(dbContext, WebhookUrl, SettingsManager.WebhookUrl).ConfigureAwait(true);
             await SettingsManager.UpdateSetting(dbContext, WebhookName, SettingsManager.WebhookName).ConfigureAwait(true);
@@ -69,6 +82,7 @@ namespace LogParser.ViewModels
             UserToken = await SettingsManager.GetUserTokenAsync(dbContext).ConfigureAwait(true);
             WebhookUrl = await SettingsManager.GetDiscordWebhookUrl(dbContext).ConfigureAwait(true);
             WebhookName = await SettingsManager.GetDiscordWebhookName(dbContext).ConfigureAwait(true);
+            PostToDiscord = await SettingsManager.GetPostToDiscord(dbContext).ConfigureAwait(true);
         }
     }
 }
