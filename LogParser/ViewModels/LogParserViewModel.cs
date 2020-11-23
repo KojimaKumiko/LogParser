@@ -6,6 +6,7 @@ using LogParser.Controller;
 using LogParser.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
+using Serilog;
 using Stylet;
 using System;
 using System.Collections.Generic;
@@ -46,8 +47,12 @@ namespace LogParser.ViewModels
 
         private bool installed;
 
+        private bool isLoadingData;
+
         public LogParserViewModel(DatabaseContext dbContext, ParseController parseController, DpsReportController dpsReportController)
         {
+            Log.Debug("LogParserViewModel constructor called.");
+
             this.dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             this.parseController = parseController ?? throw new ArgumentNullException(nameof(parseController));
             this.dpsReportController = dpsReportController ?? throw new ArgumentNullException(nameof(dpsReportController));
@@ -132,6 +137,12 @@ namespace LogParser.ViewModels
             set { SetAndNotify(ref showProgressBar, value); }
         }
 
+        public bool IsLoadingData
+        {
+            get { return isLoadingData; }
+            set { SetAndNotify(ref isLoadingData, value); }
+        }
+
         public bool CanParseFiles
         {
             get { return FilesToParse != null && FilesToParse.Count > 0; }
@@ -151,11 +162,13 @@ namespace LogParser.ViewModels
                 FilesToParse.AddRange(fileDialog.FileNames);
                 FilesToParse.Refresh();
             }
+
+            Log.Debug("Added files for Parsing");
         }
 
         public async Task ParseFilesAsync()
         {
-            Debug.WriteLine("Parse Files.");
+            Log.Information("{Method} called", nameof(ParseFilesAsync));
 
             Progress = 0;
 
@@ -165,6 +178,7 @@ namespace LogParser.ViewModels
 
             dbContext.ParsedLogFiles.AddRange(parsedLogs);
 
+            Log.Information("Saving logs in the Database.");
             await dbContext.SaveChangesAsync().ConfigureAwait(true);
             FilesToParse.Clear();
 
@@ -175,11 +189,11 @@ namespace LogParser.ViewModels
             bool postToDiscord = await SettingsManager.GetPostToDiscord(dbContext).ConfigureAwait(true);
             if (postToDiscord)
             {
+                Log.Information("Posting the Logs to Discord.");
                 await SendToDiscord(parsedLogs).ConfigureAwait(true);
             }
 
             Progress += 5;
-            Debug.WriteLine("Done");
         }
 
         public async Task UpdateEliteInsights()
@@ -308,10 +322,14 @@ namespace LogParser.ViewModels
 
         private async Task LoadDataFromDatabase()
         {
+            IsLoadingData = true;
+
             var orderedLogs = dbContext.ParsedLogFiles.AsQueryable().OrderBy(l => l.StartTime);
             List<ParsedLogFile> parsedLogs = await orderedLogs.ToListAsync().ConfigureAwait(true);
             LogFiles.Clear();
             LogFiles.AddRange(parsedLogs);
+
+            IsLoadingData = false;
         }
 
         private void LogFilesCollectionChanged(object sender, NotifyCollectionChangedEventArgs eventArgs)
@@ -341,6 +359,8 @@ namespace LogParser.ViewModels
 
             Task<DPSReport> uploadTask = null;
 
+            Log.Information("Parsing {Count} files", FilesToParse.Count);
+
             foreach (string file in FilesToParse)
             {
                 if (upload)
@@ -369,6 +389,8 @@ namespace LogParser.ViewModels
 
                 Progress += progressIncrement / FilesToParse.Count;
             }
+
+            Log.Information("Finished parsing files.");
         }
     }
 }

@@ -74,6 +74,15 @@
                 </behaviors:Interaction.Triggers>
             </DataGrid>
 
+            <ProgressBar Grid.Column="0" Grid.Row="1" Value="0" IsIndeterminate="True" RenderTransformOrigin="0.5, 0.5"
+                         Style="{DynamicResource MaterialDesignCircularProgressBar}"
+                         Height="45" Width="45" VerticalAlignment="Center" HorizontalAlignment="Center"
+                         Visibility="{Binding IsLoadingData, Converter={x:Static s:BoolToVisibilityConverter.Instance}}">
+                <ProgressBar.RenderTransform>
+                    <ScaleTransform ScaleX="2" ScaleY="2" />
+                </ProgressBar.RenderTransform>
+            </ProgressBar>
+
             <DataGrid x:Name="FileGrid" Grid.Column="1" Grid.Row="1" Margin="10 10 10 0"
                       AutoGenerateColumns="False" ItemsSource="{Binding FilesToParse}"
                       CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"

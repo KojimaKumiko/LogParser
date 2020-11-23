@@ -1,22 +1,26 @@
 ﻿using Database.Models;
+using Microsoft.EntityFrameworkCore;
 using System;
 
 namespace Database
 {
     public static class DatabaseSeeder
     {
-        public static void Seed(DatabaseContext context)
+        public static void Seed(DatabaseContext context, bool isDev)
         {
             _ = context ?? throw new ArgumentNullException(nameof(context));
 
             bool shouldSeed = false;
 
-#if DEBUG
-            //context.Database.EnsureDeleted();
-            shouldSeed = context.Database.EnsureCreated();
-#else
-            context.Database.Migrate();
-#endif
+            if (isDev)
+            {
+                //context.Database.EnsureDeleted();
+                shouldSeed = context.Database.EnsureCreated();
+            }
+            else
+            {
+                context.Database.Migrate();
+            }
 
             if (shouldSeed)
             {

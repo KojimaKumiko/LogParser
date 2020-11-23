@@ -1,12 +1,6 @@
-﻿using Database;
-using Microsoft.Win32;
+﻿using Serilog;
 using Stylet;
 using System;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Compression;
-using System.Media;
-using System.Reflection;
 
 namespace LogParser.ViewModels
 {
@@ -18,6 +12,8 @@ namespace LogParser.ViewModels
 
         public ShellViewModel(Func<LogParserViewModel> logParserFunc, Func<SettingsViewModel> settingsFunc)
         {
+            Log.Debug("ShellViewModel constructor called.");
+
             this.logParserFunc = logParserFunc;
             this.settingsFunc = settingsFunc;
         }
