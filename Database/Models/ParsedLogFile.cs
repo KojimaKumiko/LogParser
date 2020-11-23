@@ -53,6 +53,8 @@ namespace Database.Models
 
         public string DpsReportLink { get; set; }
 
+        public string HtmlPath { get; set; }
+
         public List<LogPlayer> Players { get; set; }
     }
 }

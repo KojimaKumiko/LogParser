@@ -9,6 +9,8 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Serilog;
+using System.Threading.Tasks;
+using System.Windows.Threading;
 
 namespace LogParser
 {
@@ -18,11 +20,12 @@ namespace LogParser
 
         private DatabaseContext database;
 
-        private bool isDev = false;
+        private bool isDev;
 
         protected override void OnStart()
         {
-            string environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+            //string environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+            string environmentName = "Production";
 
             var config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
@@ -37,7 +40,7 @@ namespace LogParser
 
             var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
 
-            if (environmentName.Equals("Development", StringComparison.OrdinalIgnoreCase))
+            if (environmentName.Equals("Dev", StringComparison.OrdinalIgnoreCase))
             {
                 optionsBuilder.UseSqlServer(configuration.GetConnectionString("Database"));
                 isDev = true;
@@ -49,6 +52,8 @@ namespace LogParser
             }
 
             database = new DatabaseContext(optionsBuilder.Options);
+
+            SetupExceptionHandling();
 
             Log.Debug("Configuration done.");
         }
@@ -73,6 +78,25 @@ namespace LogParser
         {
             Log.Debug("Seeding database.");
             DatabaseSeeder.Seed(database, isDev);
+        }
+
+        [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "The hook get's called through Stylets bootstrapper.")]
+        protected override void OnUnhandledException(DispatcherUnhandledExceptionEventArgs e)
+        {
+            Log.Error(e.Exception, "Application.Current.DispatcherUnhandledException");
+            e.Handled = true;
+        }
+
+        private void SetupExceptionHandling()
+        {
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+                Log.Error((Exception)e.ExceptionObject, "AppDomain.CurrentDomain.UnhandledException");
+
+            TaskScheduler.UnobservedTaskException += (s, e) =>
+            {
+                Log.Error(e.Exception, "TaskScheduler.UnobservedTaskException");
+                e.SetObserved();
+            };
         }
     }
 }

@@ -9,74 +9,104 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Database.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20200815084322_Changed_Duration_to_String")]
-    partial class Changed_Duration_to_String
+    [Migration("20201123171709_InitialDb")]
+    partial class InitialDb
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "3.1.6");
+                .HasAnnotation("ProductVersion", "3.1.9");
 
-            modelBuilder.Entity("Database.Models.LogFile", b =>
+            modelBuilder.Entity("Database.Models.DpsTarget", b =>
                 {
-                    b.Property<int>("ID")
+                    b.Property<long>("ID")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("BossName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("ParsedLogFileID")
+                    b.Property<long>("ActorCondiDPS")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Recorder")
-                        .HasColumnType("TEXT");
+                    b.Property<long>("ActorCondiDamage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ActorDPS")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ActorDamage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ActorPowerDPS")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ActorPowerDamage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CondiDPS")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CondiDamage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("DPS")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Damage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("PlayerID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("PowerDPS")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("PowerDamage")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("ID");
 
-                    b.HasIndex("ParsedLogFileID");
+                    b.HasIndex("PlayerID");
 
-                    b.ToTable("LogFile");
+                    b.ToTable("DpsTarget");
                 });
 
             modelBuilder.Entity("Database.Models.LogPlayer", b =>
                 {
-                    b.Property<int>("ID")
+                    b.Property<long>("ID")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("AccountName")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Concentration")
+                    b.Property<long>("Concentration")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Condition")
+                    b.Property<long>("Condition")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("HasCommander")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Healing")
+                    b.Property<long>("Healing")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Instance")
+                    b.Property<long>("Instance")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("ParsedLogFileID")
+                    b.Property<long>("ParsedLogFileID")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("SubGroup")
+                    b.Property<string>("Profession")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("SubGroup")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Toughness")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Weapons")
+                    b.Property<long>("Toughness")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("ID");
@@ -88,7 +118,7 @@ namespace Database.Migrations
 
             modelBuilder.Entity("Database.Models.ParsedLogFile", b =>
                 {
-                    b.Property<int>("ID")
+                    b.Property<long>("ID")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
@@ -99,6 +129,9 @@ namespace Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("BossName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DpsReportLink")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Duration")
@@ -139,11 +172,26 @@ namespace Database.Migrations
                     b.ToTable("ParsedLogFile");
                 });
 
-            modelBuilder.Entity("Database.Models.LogFile", b =>
+            modelBuilder.Entity("Database.Models.Setting", b =>
                 {
-                    b.HasOne("Database.Models.ParsedLogFile", "ParsedLogFile")
-                        .WithMany()
-                        .HasForeignKey("ParsedLogFileID");
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Name");
+
+                    b.ToTable("Settings");
+                });
+
+            modelBuilder.Entity("Database.Models.DpsTarget", b =>
+                {
+                    b.HasOne("Database.Models.LogPlayer", "Player")
+                        .WithMany("DpsTargets")
+                        .HasForeignKey("PlayerID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Database.Models.LogPlayer", b =>

@@ -189,6 +189,7 @@ namespace LogParser.Controller
             string htmlFileName = Path.GetFileName(htmlFile);
             htmlPath = Path.Combine(htmlPath, htmlFileName);
             File.Move(htmlFile, htmlPath, true);
+            logFile.HtmlPath = htmlPath;
 
             logFile.Players.AddRange(logPlayers);
 

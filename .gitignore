@@ -30,6 +30,8 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+[Pp]ublish/
+[Pp]ublish_old/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/

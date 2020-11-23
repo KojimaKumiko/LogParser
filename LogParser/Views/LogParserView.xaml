@@ -41,7 +41,8 @@
 
             <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" Margin="25 0 0 0">
                 <ComboBox ItemsSource="{Binding BossNameFilters}" SelectionChanged="{s:Action BossFilterChanged}"
-                          SelectedItem="{Binding SelectedBossFilter, UpdateSourceTrigger=PropertyChanged}" />
+                          SelectedItem="{Binding SelectedBossFilter, UpdateSourceTrigger=PropertyChanged}"
+                          materialDesign:HintAssist.Hint="Boss Name Filter" materialDesign:HintAssist.IsFloating="True" />
             </StackPanel>
 
             <DataGrid Name="LogGrid" Grid.Column="0" Grid.Row="1" Margin="10 10 0 0" ItemsSource="{Binding LogFiles}"
@@ -59,8 +60,19 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <ContentControl Name="Content">
-                                    <Hyperlink Command="{s:Action OpenLink}" CommandParameter="{Binding}">
+                                    <Hyperlink Command="{s:Action OpenLink}" CommandParameter="{Binding DpsReportLink}">
                                         <TextBlock Name="Link" Text="{Binding Path=DataContext.DpsReportLink, ElementName=Content}" />
+                                    </Hyperlink>
+                                </ContentControl>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn x:Name="htmlPath" Header="Html-Report">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <ContentControl Name="Content">
+                                    <Hyperlink Command="{s:Action OpenLink}" CommandParameter="{Binding HtmlPath}">
+                                        <TextBlock Name="Link" Text="Open Report" />
                                     </Hyperlink>
                                 </ContentControl>
                             </DataTemplate>

@@ -1,6 +1,7 @@
 ﻿using Database.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Globalization;
 
 namespace Database
 {
@@ -20,6 +21,7 @@ namespace Database
             else
             {
                 context.Database.Migrate();
+                shouldSeed = !SettingsManager.GetDatabaseSeeded(context);
             }
 
             if (shouldSeed)
@@ -27,6 +29,9 @@ namespace Database
                 context.Settings.Add(new Setting { Name = SettingsManager.DpsReport, Value = "False" });
                 context.Settings.Add(new Setting { Name = SettingsManager.UserToken, Value = string.Empty });
                 context.Settings.Add(new Setting { Name = SettingsManager.WebhookUrl, Value = string.Empty });
+                context.Settings.Add(new Setting { Name = SettingsManager.WebhookName, Value = string.Empty });
+                context.Settings.Add(new Setting { Name = SettingsManager.PostDiscord, Value = "False" });
+                context.Settings.Add(new Setting { Name = SettingsManager.Seeded, Value = "True" });
                 context.SaveChanges();
             }
         }

@@ -246,14 +246,14 @@ namespace LogParser.ViewModels
             DisplayText = fileVersionInfo.ToString();
         }
 
-        public void OpenLink(ParsedLogFile logFile)
+        public void OpenLink(string path)
         {
-            if (logFile == null)
+            if (string.IsNullOrWhiteSpace(path))
             {
-                throw new ArgumentNullException(nameof(logFile));
+                throw new ArgumentNullException(nameof(path));
             }
 
-            Process.Start("explorer", logFile.DpsReportLink);
+            Process.Start("explorer", path);
         }
 
         public async Task SendToDiscord(System.Collections.IList selectedItems)
@@ -316,8 +316,8 @@ namespace LogParser.ViewModels
 
         public async Task ShowDetails(ParsedLogFile logFile)
         {
-            var viewModel = new LogDetailsViewModel() { Test = logFile.BossName };
-            await MaterialDesignThemes.Wpf.DialogHost.Show(viewModel, DialogIdentifier).ConfigureAwait(true);
+            //var viewModel = new LogDetailsViewModel() { Test = logFile.BossName };
+            //await MaterialDesignThemes.Wpf.DialogHost.Show(viewModel, DialogIdentifier).ConfigureAwait(true);
         }
 
         private async Task LoadDataFromDatabase()

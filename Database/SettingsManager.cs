@@ -25,6 +25,8 @@ namespace Database
 
         public static string PostDiscord => "PostToDiscord";
 
+        public static string Seeded => "Seeded";
+
         public static async Task<List<Setting>> GetSettings(DatabaseContext dbContext)
         {
             if (dbContext == null)
@@ -94,6 +96,18 @@ namespace Database
             Setting setting = await dbContext.Settings.SingleAsync(s => s.Name == PostDiscord).ConfigureAwait(false);
 
             return Convert.ToBoolean(setting.Value, CultureInfo.InvariantCulture);
+        }
+
+        public static bool GetDatabaseSeeded(DatabaseContext dbContext)
+        {
+            if (dbContext == null)
+            {
+                throw new ArgumentNullException(nameof(dbContext));
+            }
+
+            Setting setting = dbContext.Settings.FirstOrDefault(s => s.Name == Seeded);
+
+            return setting != null && Convert.ToBoolean(setting.Value, CultureInfo.InvariantCulture);
         }
 
         public static async Task UpdateSetting(DatabaseContext dbContext, string value, string settingName)

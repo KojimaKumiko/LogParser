@@ -6,26 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Migrations\20200809203653_Added_Log_File_Table.cs" />
-    <Compile Remove="Migrations\20200809203653_Added_Log_File_Table.Designer.cs" />
-    <Compile Remove="Migrations\20200809205004_Added_Log_File_Table.cs" />
-    <Compile Remove="Migrations\20200809205004_Added_Log_File_Table.Designer.cs" />
-    <Compile Remove="Migrations\20200809205056_Added_Log_File_Table.cs" />
-    <Compile Remove="Migrations\20200809205056_Added_Log_File_Table.Designer.cs" />
-    <Compile Remove="Migrations\20200809205153_Added_Log_File_Table.cs" />
-    <Compile Remove="Migrations\20200809205153_Added_Log_File_Table.Designer.cs" />
-    <Compile Remove="Migrations\20200809205305_Added_Log_File_Table.cs" />
-    <Compile Remove="Migrations\20200809205305_Added_Log_File_Table.Designer.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.1.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="3.1.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.9">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

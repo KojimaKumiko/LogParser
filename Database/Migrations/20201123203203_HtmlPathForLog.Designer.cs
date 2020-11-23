@@ -3,18 +3,20 @@ using System;
 using Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Database.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class ContextModelSnapshot : ModelSnapshot
+    [Migration("20201123203203_HtmlPathForLog")]
+    partial class HtmlPathForLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "3.1.6");
+                .HasAnnotation("ProductVersion", "5.0.0");
 
             modelBuilder.Entity("Database.Models.DpsTarget", b =>
                 {
@@ -68,28 +70,6 @@ namespace Database.Migrations
                     b.ToTable("DpsTarget");
                 });
 
-            modelBuilder.Entity("Database.Models.LogFile", b =>
-                {
-                    b.Property<long>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("BossName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<long?>("ParsedLogFileID")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Recorder")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("ParsedLogFileID");
-
-                    b.ToTable("LogFile");
-                });
-
             modelBuilder.Entity("Database.Models.LogPlayer", b =>
                 {
                     b.Property<long>("ID")
@@ -99,19 +79,19 @@ namespace Database.Migrations
                     b.Property<string>("AccountName")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Concentration")
+                    b.Property<long>("Concentration")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Condition")
+                    b.Property<long>("Condition")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("HasCommander")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Healing")
+                    b.Property<long>("Healing")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Instance")
+                    b.Property<long>("Instance")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
@@ -120,13 +100,13 @@ namespace Database.Migrations
                     b.Property<long>("ParsedLogFileID")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("SubGroup")
+                    b.Property<string>("Profession")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("SubGroup")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Toughness")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Weapons")
+                    b.Property<long>("Toughness")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("ID");
@@ -151,6 +131,9 @@ namespace Database.Migrations
                     b.Property<string>("BossName")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DpsReportLink")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Duration")
                         .HasColumnType("TEXT");
 
@@ -162,6 +145,9 @@ namespace Database.Migrations
 
                     b.Property<long>("Gw2Build")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("HtmlPath")
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsCM")
                         .HasColumnType("INTEGER");
@@ -189,6 +175,19 @@ namespace Database.Migrations
                     b.ToTable("ParsedLogFile");
                 });
 
+            modelBuilder.Entity("Database.Models.Setting", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Name");
+
+                    b.ToTable("Settings");
+                });
+
             modelBuilder.Entity("Database.Models.DpsTarget", b =>
                 {
                     b.HasOne("Database.Models.LogPlayer", "Player")
@@ -196,13 +195,8 @@ namespace Database.Migrations
                         .HasForeignKey("PlayerID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
 
-            modelBuilder.Entity("Database.Models.LogFile", b =>
-                {
-                    b.HasOne("Database.Models.ParsedLogFile", "ParsedLogFile")
-                        .WithMany()
-                        .HasForeignKey("ParsedLogFileID");
+                    b.Navigation("Player");
                 });
 
             modelBuilder.Entity("Database.Models.LogPlayer", b =>
@@ -212,6 +206,18 @@ namespace Database.Migrations
                         .HasForeignKey("ParsedLogFileID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("ParsedLogFile");
+                });
+
+            modelBuilder.Entity("Database.Models.LogPlayer", b =>
+                {
+                    b.Navigation("DpsTargets");
+                });
+
+            modelBuilder.Entity("Database.Models.ParsedLogFile", b =>
+                {
+                    b.Navigation("Players");
                 });
 #pragma warning restore 612, 618
         }
