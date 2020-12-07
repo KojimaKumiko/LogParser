@@ -1,5 +1,5 @@
 ﻿using Database;
-using LogParser.Controller;
+using LogParser.Services;
 using LogParser.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -11,6 +11,7 @@ using System.IO;
 using Serilog;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using MaterialDesignThemes.Wpf;
 
 namespace LogParser
 {
@@ -20,12 +21,27 @@ namespace LogParser
 
         private DatabaseContext database;
 
-        private bool isDev;
+        private SnackbarMessageQueue messageQueue;
+
+        public override void Dispose()
+        {
+            if (messageQueue != null)
+            {
+                messageQueue.Dispose();
+            }
+
+            if (database != null)
+            {
+                database.Dispose();
+            }
+
+            base.Dispose();
+            GC.SuppressFinalize(this);
+        }
 
         protected override void OnStart()
         {
-            //string environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
-            string environmentName = "Production";
+            string environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
 
             var config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
@@ -40,20 +56,13 @@ namespace LogParser
 
             var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
 
-            if (environmentName.Equals("Dev", StringComparison.OrdinalIgnoreCase))
-            {
-                optionsBuilder.UseSqlServer(configuration.GetConnectionString("Database"));
-                isDev = true;
-            }
-            else
-            {
-                optionsBuilder.UseSqlite(configuration.GetConnectionString("Database"));
-                isDev = false;
-            }
+            optionsBuilder.UseSqlite(configuration.GetConnectionString("Database"));
 
             database = new DatabaseContext(optionsBuilder.Options);
 
             SetupExceptionHandling();
+
+            messageQueue = new SnackbarMessageQueue();
 
             Log.Debug("Configuration done.");
         }
@@ -63,21 +72,25 @@ namespace LogParser
         {
             Log.Debug("Configuring IoC.");
 
-            // Configure the IoC container in here
+            // Instance bindings
             builder.Bind<IConfiguration>().ToInstance(configuration);
-            builder.Bind<DatabaseContext>().ToInstance(database);
-            builder.Bind<ParseController>().ToSelf();
-            builder.Bind<DpsReportController>().ToSelf();
+            builder.Bind<DatabaseContext>().ToInstance(database).DisposeWithContainer(false);
+            builder.Bind<SnackbarMessageQueue>().ToInstance(messageQueue).DisposeWithContainer(false);
 
-            // Factories for ViewModels
-            builder.Bind<LogParserViewModel>().ToFactory(c => new LogParserViewModel(c.Get<DatabaseContext>(), c.Get<ParseController>(), c.Get<DpsReportController>()));
-            builder.Bind<SettingsViewModel>().ToFactory(c => new SettingsViewModel(c.Get<DatabaseContext>(), c.Get<DpsReportController>()));
+            // Service/Controller bindings
+            builder.Bind<DpsReportController>().ToSelf();
+            builder.Bind<IParseService>().To<ParseService>();
+            builder.Bind<IDiscordService>().To<DiscordService>();
+
+            // ViewModel bindings
+            builder.Bind<LogParserViewModel>().ToSelf();
+            builder.Bind<SettingsViewModel>().ToSelf();
         }
 
         protected override void Configure()
         {
             Log.Debug("Seeding database.");
-            DatabaseSeeder.Seed(database, isDev);
+            DatabaseSeeder.Seed(database);
         }
 
         [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "The hook get's called through Stylets bootstrapper.")]
@@ -87,7 +100,7 @@ namespace LogParser
             e.Handled = true;
         }
 
-        private void SetupExceptionHandling()
+        private static void SetupExceptionHandling()
         {
             AppDomain.CurrentDomain.UnhandledException += (s, e) =>
                 Log.Error((Exception)e.ExceptionObject, "AppDomain.CurrentDomain.UnhandledException");

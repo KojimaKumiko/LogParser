@@ -61,6 +61,69 @@ namespace LogParser.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Not Installed.
+        /// </summary>
+        public static string EliteInsightsNotInstalled {
+            get {
+                return ResourceManager.GetString("EliteInsightsNotInstalled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Please select some Logs from the List above..
+        /// </summary>
+        public static string Err_SelectLogs {
+            get {
+                return ResourceManager.GetString("Err_SelectLogs", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Please set a Webhook URL first in the Settings..
+        /// </summary>
+        public static string Err_Webhook {
+            get {
+                return ResourceManager.GetString("Err_Webhook", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Install Elite Insights.
+        /// </summary>
+        public static string InstallEliteInsights {
+            get {
+                return ResourceManager.GetString("InstallEliteInsights", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Successfully installed Elite Insights!.
+        /// </summary>
+        public static string SuccessInstalled {
+            get {
+                return ResourceManager.GetString("SuccessInstalled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Successfully updated Elite Insights!.
+        /// </summary>
+        public static string SuccessUpdate {
+            get {
+                return ResourceManager.GetString("SuccessUpdate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Update Elite Insights.
+        /// </summary>
+        public static string UpdateEliteInsights {
+            get {
+                return ResourceManager.GetString("UpdateEliteInsights", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Upload logs to Dps Report.
         /// </summary>
         public static string UploadToDpsReport {

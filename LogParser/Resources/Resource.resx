@@ -117,6 +117,27 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="EliteInsightsNotInstalled" xml:space="preserve">
+    <value>Not Installed</value>
+  </data>
+  <data name="Err_SelectLogs" xml:space="preserve">
+    <value>Please select some Logs from the List above.</value>
+  </data>
+  <data name="Err_Webhook" xml:space="preserve">
+    <value>Please set a Webhook URL first in the Settings.</value>
+  </data>
+  <data name="InstallEliteInsights" xml:space="preserve">
+    <value>Install Elite Insights</value>
+  </data>
+  <data name="SuccessInstalled" xml:space="preserve">
+    <value>Successfully installed Elite Insights!</value>
+  </data>
+  <data name="SuccessUpdate" xml:space="preserve">
+    <value>Successfully updated Elite Insights!</value>
+  </data>
+  <data name="UpdateEliteInsights" xml:space="preserve">
+    <value>Update Elite Insights</value>
+  </data>
   <data name="UploadToDpsReport" xml:space="preserve">
     <value>Upload logs to Dps Report</value>
   </data>

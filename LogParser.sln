@@ -14,7 +14,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogParserTests", "LogParserTests\LogParserTests.csproj", "{149A51F6-70AA-40A6-9B39-A18FB68C6011}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LogParserTests", "LogParserTests\LogParserTests.csproj", "{149A51F6-70AA-40A6-9B39-A18FB68C6011}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Unit Tests", "Unit Tests", "{218A5C70-3D69-4AA7-AAB0-954F2F851075}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +43,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{149A51F6-70AA-40A6-9B39-A18FB68C6011} = {218A5C70-3D69-4AA7-AAB0-954F2F851075}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {44EFF26F-6682-4EA8-942E-F1DE12AE171D}

@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using MaterialDesignThemes.Wpf;
+using Serilog;
 using Stylet;
 using System;
 
@@ -6,16 +7,23 @@ namespace LogParser.ViewModels
 {
     public class ShellViewModel : Conductor<IScreen>
     {
-        private readonly Func<LogParserViewModel> logParserFunc;
+        private readonly LogParserViewModel logParserViewModel;
 
-        private readonly Func<SettingsViewModel> settingsFunc;
+        private readonly SettingsViewModel settingsViewModel;
 
-        public ShellViewModel(Func<LogParserViewModel> logParserFunc, Func<SettingsViewModel> settingsFunc)
+        private SnackbarMessageQueue messageQueue;
+
+        public ShellViewModel(LogParserViewModel logParserViewModel, SettingsViewModel settingsViewModel, SnackbarMessageQueue messageQueue)
         {
-            Log.Debug("ShellViewModel constructor called.");
+            this.logParserViewModel = logParserViewModel;
+            this.settingsViewModel = settingsViewModel;
+            this.messageQueue = messageQueue;
+        }
 
-            this.logParserFunc = logParserFunc;
-            this.settingsFunc = settingsFunc;
+        public SnackbarMessageQueue MessageQueue
+        {
+            get { return messageQueue; }
+            set { SetAndNotify(ref messageQueue, value); }
         }
 
         public void SwitchView(ViewType viewType)
@@ -23,10 +31,10 @@ namespace LogParser.ViewModels
             switch (viewType)
             {
                 case ViewType.LogParserViewModel:
-                    ActivateItem(logParserFunc());
+                    ActivateItem(logParserViewModel);
                     break;
                 case ViewType.SettingsViewModel:
-                    ActivateItem(settingsFunc());
+                    ActivateItem(settingsViewModel);
                     break;
                 default:
                     break;

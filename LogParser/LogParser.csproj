@@ -9,6 +9,9 @@
 	<DisableBeauty>False</DisableBeauty>
 	<ForceBeauty>False</ForceBeauty>
 	<BeautyLogLevel>Error</BeautyLogLevel>
+	<ApplicationManifest>app.manifest</ApplicationManifest>
+	<AssemblyVersion>0.1.0.0</AssemblyVersion>
+	<FileVersion>0.1.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-	<PackageReference Include="Discord.Net.Webhook" Version="2.2.0" />
+	<PackageReference Include="Discord.Net.Webhook" Version="2.3.0-dev-20201126.1" />
 	<PackageReference Include="MaterialDesignColors" Version="1.2.7" />
 	<PackageReference Include="MaterialDesignThemes" Version="3.2.0" />
 	<PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.1">

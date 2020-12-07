@@ -1,5 +1,6 @@
 ﻿using Database;
-using LogParser.Controller;
+using LogParser.Services;
+using MaterialDesignThemes.Wpf;
 using Stylet;
 using System;
 using System.Threading.Tasks;
@@ -22,10 +23,13 @@ namespace LogParser.ViewModels
 
         private string webhookName;
 
-        public SettingsViewModel(DatabaseContext dbContext, DpsReportController dpsReportController)
+        private SnackbarMessageQueue messageQueue;
+
+        public SettingsViewModel(DatabaseContext dbContext, DpsReportController dpsReportController, SnackbarMessageQueue messageQueue)
         {
             this.dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             this.dpsReportController = dpsReportController ?? throw new ArgumentNullException(nameof(dpsReportController));
+            this.messageQueue = messageQueue ?? throw new ArgumentNullException(nameof(messageQueue));
 
             _ = LoadDataFromDatabase();
         }
@@ -74,6 +78,8 @@ namespace LogParser.ViewModels
             await SettingsManager.UpdateSetting(dbContext, WebhookName, SettingsManager.WebhookName).ConfigureAwait(true);
 
             await dbContext.SaveChangesAsync().ConfigureAwait(true);
+
+            messageQueue.Enqueue("Settings succesfully saved.");
         }
 
         private async Task LoadDataFromDatabase()

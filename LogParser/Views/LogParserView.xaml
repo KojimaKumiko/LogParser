@@ -28,19 +28,20 @@
                 <ContentControl Content="{Binding}" />
             </DataTemplate>
         </materialDesign:DialogHost.DialogContentTemplate>
-        <Grid>
+        <Grid x:Name="Grid">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*" />
-                <ColumnDefinition />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-                <RowDefinition Height="50" />
+                <RowDefinition Height="65" />
                 <RowDefinition Height="3*" />
-                <RowDefinition />
+                <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" Margin="25 0 0 0">
-                <ComboBox ItemsSource="{Binding BossNameFilters}" SelectionChanged="{s:Action BossFilterChanged}"
+            <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" Margin="15 0 0 0">
+                <ComboBox Height="45" Width="225" FontSize="16"
+                          ItemsSource="{Binding BossNameFilters}" SelectionChanged="{s:Action BossFilterChanged}"
                           SelectedItem="{Binding SelectedBossFilter, UpdateSourceTrigger=PropertyChanged}"
                           materialDesign:HintAssist.Hint="Boss Name Filter" materialDesign:HintAssist.IsFloating="True" />
             </StackPanel>
@@ -48,7 +49,8 @@
             <DataGrid Name="LogGrid" Grid.Column="0" Grid.Row="1" Margin="10 10 0 0" ItemsSource="{Binding LogFiles}"
                       AutoGenerateColumns="False"  CanUserAddRows="False" CanUserDeleteRows="False"
                       IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow"
-                      IsSynchronizedWithCurrentItem="True" GridLinesVisibility="All">
+                      IsSynchronizedWithCurrentItem="True" GridLinesVisibility="All"
+                      PreviewKeyDown="{s:Action DataGridKeyDown}">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Boss" Binding="{Binding BossName}" />
                     <DataGridTextColumn Header="Recorded by" Binding="{Binding RecordedBy}" />
@@ -79,11 +81,11 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                 </DataGrid.Columns>
-                <behaviors:Interaction.Triggers>
+                <!--<behaviors:Interaction.Triggers>
                     <behaviors:EventTrigger EventName="MouseDoubleClick" SourceObject="{Binding ElementName=LogGrid}">
                         <behaviors:InvokeCommandAction Command="{Binding ShowDetailsCommand}" CommandParameter="{Binding LogFiles/}" />
                     </behaviors:EventTrigger>
-                </behaviors:Interaction.Triggers>
+                </behaviors:Interaction.Triggers>-->
             </DataGrid>
 
             <ProgressBar Grid.Column="0" Grid.Row="1" Value="0" IsIndeterminate="True" RenderTransformOrigin="0.5, 0.5"
@@ -112,29 +114,32 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <StackPanel Grid.Row="2" Orientation="Horizontal">
-                <StackPanel.Resources>
+            <WrapPanel Grid.Column="0" Grid.Row="2" Orientation="Horizontal" Margin="10 10 0 0">
+                <WrapPanel.Resources>
                     <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                         <Setter Property="Margin" Value="10 10 0 0" />
                         <Setter Property="Height" Value="40" />
                         <Setter Property="HorizontalAlignment" Value="Right" />
                     </Style>
-                </StackPanel.Resources>
+                </WrapPanel.Resources>
                 <Button Content="Open File" Command="{s:Action SetFile}"/>
                 <Button Content="Parse Files" Command="{s:Action ParseFilesAsync}" />
                 <Button Content="{Binding UpdateEliteInsightsContent}" Command="{s:Action UpdateEliteInsights}" />
-                <Button Content="Send to Discord" Command="{s:Action SendToDiscord}"
+                <Button Content="Post to Discord" Command="{s:Action SendToDiscord}"
                         CommandParameter="{Binding ElementName=LogGrid, Path=SelectedItems}" />
-            </StackPanel>
+                <Button Content="Delete Selected Log" Command="{s:Action DeleteLogEntries}"
+                        CommandParameter="{Binding ElementName=LogGrid}" />
+                <Button Content="Refresh Grid" Command="{s:Action RefreshGrid}" />
+            </WrapPanel>
 
             <StackPanel Grid.Column="1" Grid.Row="2" Margin="10 10 0 0">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Elite Insights Version: " />
-                    <TextBlock Text="{Binding EliteInsightsVersion}" />
+                    <TextBlock Text="Elite Insights Version: " FontSize="14" />
+                    <TextBlock Text="{Binding EliteInsightsVersion}" FontSize="14" />
                 </StackPanel>
 
                 <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}"
-                             VerticalAlignment="Center" Margin="10" Height="10"
+                             VerticalAlignment="Center" Margin="0 10 10 0" Height="15"
                              Visibility="{Binding ShowProgressBar, Converter={x:Static s:BoolToVisibilityConverter.Instance}}" />
             </StackPanel>
         </Grid>

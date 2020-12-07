@@ -1,9 +1,8 @@
 ﻿using Database;
 using Database.Models;
-using Discord;
-using Discord.Webhook;
-using LogParser.Controller;
+using LogParser.Services;
 using LogParser.Models;
+using LogParser.Resources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
 using Serilog;
@@ -18,6 +17,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
+using MaterialDesignThemes.Wpf;
 
 namespace LogParser.ViewModels
 {
@@ -27,15 +27,15 @@ namespace LogParser.ViewModels
 
         private readonly DatabaseContext dbContext;
 
-        private readonly ParseController parseController;
+        private readonly IParseService parseService;
 
         private readonly DpsReportController dpsReportController;
+
+        private readonly IDiscordService discordService;
 
         private readonly string clearFilterText = " --- NONE --- ";
 
         private string selectedBossFilter;
-
-        private string displayText;
 
         private string eliteInsightsVersion;
 
@@ -49,13 +49,17 @@ namespace LogParser.ViewModels
 
         private bool isLoadingData;
 
-        public LogParserViewModel(DatabaseContext dbContext, ParseController parseController, DpsReportController dpsReportController)
+        private SnackbarMessageQueue messageQueue;
+
+        public LogParserViewModel(DatabaseContext dbContext, IParseService parseService, DpsReportController dpsReportController, IDiscordService discordService, SnackbarMessageQueue messageQueue)
         {
             Log.Debug("LogParserViewModel constructor called.");
 
             this.dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-            this.parseController = parseController ?? throw new ArgumentNullException(nameof(parseController));
+            this.parseService = parseService ?? throw new ArgumentNullException(nameof(parseService));
+            this.discordService = discordService ?? throw new ArgumentNullException(nameof(discordService));
             this.dpsReportController = dpsReportController ?? throw new ArgumentNullException(nameof(dpsReportController));
+            this.messageQueue = messageQueue ?? throw new ArgumentNullException(nameof(messageQueue));
 
             LogFiles = new BindableCollection<ParsedLogFile>();
             FilesToParse = new BindableCollection<string>();
@@ -67,17 +71,17 @@ namespace LogParser.ViewModels
             LogFiles.CollectionChanged += LogFilesCollectionChanged;
             FilesToParse.CollectionChanged += (o, e) => NotifyOfPropertyChange(nameof(CanParseFiles));
 
-            var fileVersion = parseController.GetFileVersionInfo();
-            if (fileVersion == null)
+            string fileVersion = parseService.GetFileVersionInfo();
+            if (string.IsNullOrWhiteSpace(fileVersion))
             {
-                EliteInsightsVersion = "Not Installed";
-                UpdateEliteInsightsContent = "Install Elite Insights";
+                EliteInsightsVersion = Resource.EliteInsightsNotInstalled;
+                UpdateEliteInsightsContent = Resource.InstallEliteInsights;
                 installed = false;
             }
             else
             {
-                EliteInsightsVersion = fileVersion.FileVersion;
-                UpdateEliteInsightsContent = "Update Elite Insights";
+                EliteInsightsVersion = fileVersion;
+                UpdateEliteInsightsContent = Resource.UpdateEliteInsights;
                 installed = true;
             }
 
@@ -100,12 +104,6 @@ namespace LogParser.ViewModels
         public BindableCollection<string> FilesToParse { get; private set; }
 
         public ICommand ShowDetailsCommand { get; set; }
-
-        public string DisplayText
-        {
-            get { return displayText; }
-            set { SetAndNotify(ref displayText, value); }
-        }
 
         public string SelectedBossFilter
         {
@@ -198,13 +196,13 @@ namespace LogParser.ViewModels
 
         public async Task UpdateEliteInsights()
         {
-            await parseController.InstallEliteInsights().ConfigureAwait(true);
+            await parseService.InstallEliteInsights().ConfigureAwait(true);
 
-            var fileVersion = parseController.GetFileVersionInfo();
-            EliteInsightsVersion = fileVersion.FileVersion;
-            UpdateEliteInsightsContent = "Update Elite Insights";
+            string fileVersion = parseService.GetFileVersionInfo();
+            EliteInsightsVersion = fileVersion;
+            UpdateEliteInsightsContent = Resource.UpdateEliteInsights;
 
-            string message = installed ? "Successfully updated Elite Insights!" : "Successfully installed Elite Insights!";
+            string message = installed ? Resource.SuccessUpdate : Resource.SuccessInstalled;
             var messageModel = new MessageViewModel(message);
             await MaterialDesignThemes.Wpf.DialogHost.Show(messageModel, DialogIdentifier).ConfigureAwait(true);
 
@@ -235,17 +233,6 @@ namespace LogParser.ViewModels
             LogFiles.AddRange(filteredLogFiles);
         }
 
-        public void CheckVersion()
-        {
-            FileVersionInfo fileVersionInfo = parseController.GetFileVersionInfo();
-            if (fileVersionInfo == null)
-            {
-                DisplayText = "EI is not installed";
-            }
-
-            DisplayText = fileVersionInfo.ToString();
-        }
-
         public void OpenLink(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
@@ -258,55 +245,18 @@ namespace LogParser.ViewModels
 
         public async Task SendToDiscord(System.Collections.IList selectedItems)
         {
-            Task<string> discordWebhookUrlTask = SettingsManager.GetDiscordWebhookUrl(dbContext);
-
             if (selectedItems == null || selectedItems.Count == 0)
             {
-                string message = "Please select some Logs from the List above.";
-                var messageModel = new MessageViewModel(message);
-                await MaterialDesignThemes.Wpf.DialogHost.Show(messageModel, DialogIdentifier).ConfigureAwait(true);
+                var messageModel = new MessageViewModel(Resource.Err_SelectLogs);
+                await DialogHost.Show(messageModel, DialogIdentifier).ConfigureAwait(true);
 
                 return;
             }
 
             List<ParsedLogFile> selectedLogs = selectedItems.Cast<ParsedLogFile>().ToList();
-
-            string discordWebhookUrl = await discordWebhookUrlTask.ConfigureAwait(true);
-
-            if (string.IsNullOrWhiteSpace(discordWebhookUrl))
-            {
-                string message = "Please set a Webhook URL first in the Settings.";
-                var messageModel = new MessageViewModel(message);
-                await MaterialDesignThemes.Wpf.DialogHost.Show(messageModel, DialogIdentifier).ConfigureAwait(true);
-
-                return;
-            }
-
-            string discordWebhookName = await SettingsManager.GetDiscordWebhookName(dbContext).ConfigureAwait(true);
-            discordWebhookName = string.IsNullOrWhiteSpace(discordWebhookName) ? string.Empty : discordWebhookName;
-
-            using var webhookClient = new DiscordWebhookClient(discordWebhookUrl);
-            var embedBuilder = new EmbedBuilder
-            {
-                Color = Color.DarkBlue,
-                Title = "Logs",
-            };
-
             selectedLogs = selectedLogs.OrderBy(l => l.StartTime).ToList();
 
-            foreach (var log in selectedLogs)
-            {
-                string success = log.Success ? "  -  :white_check_mark:" : "  -  :x:";
-                string value = log.DpsReportLink ?? " - ";
-                embedBuilder.AddField(log.BossName + success, value);
-            }
-
-            List<Embed> embeds = new List<Embed>
-            {
-                embedBuilder.Build(),
-            };
-
-            await webhookClient.SendMessageAsync(embeds: embeds, username: discordWebhookName).ConfigureAwait(false);
+            await discordService.SendReports(selectedLogs).ConfigureAwait(true);
         }
 
         public void RemoveFile(string file)
@@ -316,8 +266,54 @@ namespace LogParser.ViewModels
 
         public async Task ShowDetails(ParsedLogFile logFile)
         {
-            //var viewModel = new LogDetailsViewModel() { Test = logFile.BossName };
-            //await MaterialDesignThemes.Wpf.DialogHost.Show(viewModel, DialogIdentifier).ConfigureAwait(true);
+            var viewModel = new LogDetailsViewModel() { Test = logFile.BossName };
+            await MaterialDesignThemes.Wpf.DialogHost.Show(viewModel, DialogIdentifier).ConfigureAwait(true);
+        }
+
+        public async Task DataGridKeyDown(object sender, KeyEventArgs e)
+        {
+            var dataGrid = (DataGrid)sender ?? throw new ArgumentNullException(nameof(sender));
+
+            if (e == null)
+            {
+                throw new ArgumentNullException(nameof(e));
+            }
+
+            Log.Debug("{Method} called with key {Key}", nameof(DataGridKeyDown), e.Key);
+
+            switch (e.Key)
+            {
+                case Key.Delete:
+                    await DeleteLogEntries(dataGrid).ConfigureAwait(true);
+                    break;
+                case Key.F5:
+                    await RefreshGrid().ConfigureAwait(true);
+                    break;
+            }
+        }
+
+        public async Task DeleteLogEntries(DataGrid dataGrid)
+        {
+            Log.Debug("{Method} called", nameof(DeleteLogEntries));
+
+            if (dataGrid == null)
+            {
+                Log.Error("No datagrid was supplied.");
+                throw new ArgumentNullException(nameof(dataGrid));
+            }
+
+            var logEntries = dataGrid.SelectedItems.Cast<ParsedLogFile>();
+
+            dbContext.ParsedLogFiles.RemoveRange(logEntries);
+            await dbContext.SaveChangesAsync().ConfigureAwait(true);
+
+            LogFiles.RemoveRange(logEntries);
+        }
+
+        public async Task RefreshGrid()
+        {
+            Log.Debug("{Method} called", nameof(RefreshGrid));
+            await LoadDataFromDatabase().ConfigureAwait(true);
         }
 
         private async Task LoadDataFromDatabase()
@@ -355,7 +351,7 @@ namespace LogParser.ViewModels
             bool upload = await SettingsManager.GetDpsReportUploadAsync(dbContext).ConfigureAwait(false);
             string userToken = await SettingsManager.GetUserTokenAsync(dbContext).ConfigureAwait(false);
 
-            string htmlPath = Path.Combine(ParseController.AssemblyLocation, "Logs");
+            string htmlPath = Path.Combine(ParseService.AssemblyLocation, "Logs");
 
             Task<DPSReport> uploadTask = null;
 
@@ -369,11 +365,11 @@ namespace LogParser.ViewModels
                     uploadTask = dpsReportController.UploadToDpsReport(file, userToken);
                 }
 
-                ParsedLogFile logFile = await parseController.ParseSingleFile(file, htmlPath).ConfigureAwait(false);
+                ParsedLogFile logFile = await parseService.ParseSingleFile(file, htmlPath).ConfigureAwait(false);
 
                 Progress += parseIncrement / FilesToParse.Count;
 
-                parseController.ClearLogFolder();
+                parseService.ClearLogFolder();
 
                 if (uploadTask != null)
                 {

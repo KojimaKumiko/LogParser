@@ -13,7 +13,7 @@
         d:DataContext="{d:DesignInstance vm:ShellViewModel}"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         Background="{DynamicResource MaterialDesignPaper}"
-        Title="Stylet Project" Height="450" Width="800">
+        Title="Log Parser (WIP)" Height="450" Width="800">
     <materialDesign:DrawerHost IsLeftDrawerOpen="{Binding ElementName=MenuToggleButton, Path=IsChecked}">
         <materialDesign:DrawerHost.LeftDrawerContent>
             <DockPanel MinWidth="212">
@@ -90,7 +90,9 @@
             </materialDesign:ColorZone>
 
             <ContentControl Grid.Row="1" s:View.Model="{Binding ActiveItem}" />
-            
+
+            <materialDesign:Snackbar Grid.Row="1" MessageQueue="{Binding MessageQueue}" />
+
         </Grid>
     </materialDesign:DrawerHost>
 </Window>

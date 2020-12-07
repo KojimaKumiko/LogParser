@@ -11,6 +11,9 @@ namespace LogParser.Models
 
         public string Name { get; set; }
 
+        [JsonProperty("tag_name")]
+        public string TagName { get; set; }
+
         public GitHubAsset[] Assets { get; set; }
     }
 

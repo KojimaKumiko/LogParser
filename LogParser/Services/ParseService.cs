@@ -15,14 +15,14 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace LogParser.Controller
+namespace LogParser.Services
 {
-    public class ParseController
+    public class ParseService : IParseService
     {
         private static Dictionary<string, Dictionary<string, PropertyInfo>> JsonProperties { get; }
             = new Dictionary<string, Dictionary<string, PropertyInfo>>();
 
-        public ParseController()
+        public ParseService()
         {
         }
 
@@ -35,11 +35,13 @@ namespace LogParser.Controller
 
         public static event EventHandler<ProgressChangedEventArgs> ProgressChangedEvent;
 
+
         /// <summary>
-        /// Parses the files with the current installed version of Elite Insights.
+        /// <inheritdoc/>
         /// </summary>
-        /// <param name="fileNames">The files to parse. The full path is required.</param>
-        /// <returns>A list of strings containing the paths for the generated .json and .html files for each parsed file.</returns>
+        /// <param name="fileName"><inheritdoc/></param>
+        /// <param name="htmlPath"><inheritdoc/></param>
+        /// <returns><inheritdoc/></returns>
         public async Task<ParsedLogFile> ParseSingleFile(string fileName, string htmlPath)
         {
             if (string.IsNullOrWhiteSpace(fileName))
@@ -196,6 +198,10 @@ namespace LogParser.Controller
             return logFile;
         }
 
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <returns><inheritdoc/></returns>
         public bool IsInstalled()
         {
             string path = Path.Combine(AssemblyLocation, BaseEIPath);
@@ -209,7 +215,11 @@ namespace LogParser.Controller
             return File.Exists(path);
         }
 
-        public FileVersionInfo GetFileVersionInfo()
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <returns><inheritdoc/></returns>
+        public string GetFileVersionInfo()
         {
             if (!IsInstalled())
             {
@@ -218,9 +228,13 @@ namespace LogParser.Controller
 
             string path = Path.Combine(AssemblyLocation, BaseEIPath, EliteInsightsExecutable);
 
-            return FileVersionInfo.GetVersionInfo(path);
+            return FileVersionInfo.GetVersionInfo(path).FileVersion;
         }
 
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <returns><inheritdoc/></returns>
         public async Task<Install> InstallEliteInsights()
         {
             IGitHubApi githubApi = RestClient.For<IGitHubApi>(new Uri(@"https://api.github.com"));
@@ -230,8 +244,8 @@ namespace LogParser.Controller
                 return Install.Error;
             }
 
-            FileVersionInfo fileVersion = GetFileVersionInfo();
-            if (fileVersion != null && repo.Name.Contains(fileVersion.FileVersion, StringComparison.InvariantCultureIgnoreCase))
+            string fileVersion = GetFileVersionInfo();
+            if (!string.IsNullOrWhiteSpace(fileVersion) && repo.TagName.Contains(fileVersion, StringComparison.InvariantCultureIgnoreCase))
             {
                 return Install.UpToDate;
             }
@@ -264,6 +278,9 @@ namespace LogParser.Controller
             return Install.Success;
         }
 
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
         public void ClearLogFolder()
         {
             string logFolder = Path.Combine(AssemblyLocation, LogPath);

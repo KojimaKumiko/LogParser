@@ -54,15 +54,15 @@
 
         <StackPanel Grid.Column="1" Grid.Row="0" Style="{DynamicResource ContainerStackPanel}">
             <StackPanel Orientation="Horizontal">
-                <TextBox Text="{Binding UserToken}"
+                <TextBox Text="{Binding UserToken}" Width="250"
                          materialDesign:HintAssist.Hint="User Token" materialDesign:HintAssist.IsFloating="True" />
                 <Button Content="Generate Token" VerticalAlignment="Bottom" Margin="15 0 0 0"
                         Command="{s:Action GenerateToken}" />
             </StackPanel>
             <StackPanel Orientation="Horizontal">
-                <TextBox Text="{Binding WebhookUrl}" Margin="0 0 15 0"
+                <TextBox Text="{Binding WebhookUrl}" Margin="0 0 15 0" Width="250"
                          materialDesign:HintAssist.Hint="Discord Webhook Url" materialDesign:HintAssist.IsFloating="True" />
-                <TextBox Text="{Binding WebhookName}"
+                <TextBox Text="{Binding WebhookName}" Width="185"
                          materialDesign:HintAssist.Hint="Discord Webhook Name" materialDesign:HintAssist.IsFloating="True" />
             </StackPanel>
         </StackPanel>

@@ -12,14 +12,17 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LogParser.Controller
+namespace LogParser.Services
 {
     public class DpsReportController
     {
         private static readonly Uri dpsReportUri = new Uri(@"https://dps.report");
 
+        private IDpsReport dpsReportApi;
+
         public DpsReportController()
         {
+            dpsReportApi = RestClient.For<IDpsReport>(dpsReportUri);
         }
 
         public async Task<DPSReport> UploadToDpsReport(string file, string userToken)
@@ -28,8 +31,6 @@ namespace LogParser.Controller
             {
                 throw new ArgumentNullException(nameof(file));
             }
-
-            IDpsReport dpsReportApi = RestClient.For<IDpsReport>(dpsReportUri);
 
             string fileName = file.Split("\\").Last();
             byte[] fileContent = await File.ReadAllBytesAsync(file).ConfigureAwait(false);
@@ -55,7 +56,6 @@ namespace LogParser.Controller
 
         public async Task<string> GetUserToken()
         {
-            IDpsReport dpsReportApi = RestClient.For<IDpsReport>(dpsReportUri);
             var response = await dpsReportApi.GetUserToken().ConfigureAwait(false);
             
             if (string.IsNullOrWhiteSpace(response))
