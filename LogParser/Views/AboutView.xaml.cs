@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -14,11 +16,11 @@ using System.Windows.Shapes;
 namespace LogParser.Views
 {
     /// <summary>
-    /// Interaction logic for TestView.xaml
+    /// Interaction logic for AboutView.xaml
     /// </summary>
-    public partial class TestView : UserControl
+    public partial class AboutView : UserControl
     {
-        public TestView()
+        public AboutView()
         {
             InitializeComponent();
         }

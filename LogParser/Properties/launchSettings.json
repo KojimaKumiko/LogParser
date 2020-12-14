@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "LogParser": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Dev"
+      }
+    }
+  }
+}

@@ -1,24 +1,59 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text;
 
 namespace Database.Models
 {
     [Table("ParsedLogFile")]
     public class ParsedLogFile : BaseEntity
     {
+        [JsonProperty("eliteInsightsVersion")]
+        public string EliteInsightsVersion { get; set; }
+
+        [JsonProperty("triggerID")]
+        public long TriggerID { get; set; }
+
+        [JsonProperty("fightName")]
         public string BossName { get; set; }
-        
-        public string Recorder { get; set; }
 
-        public string Json { get; set; }
+        [JsonProperty("fightIcon")]
+        public string BossIcon { get; set; }
 
-        public string Html { get; set; }
+        [JsonProperty("arcVersion")]
+        public string ArcVersion { get; set; }
 
-        public override string ToString()
-        {
-            return $"Boss: {BossName}\nRecorder: {Recorder}";
-        }
+        [JsonProperty("gW2Build")]
+        public long Gw2Build { get; set; }
+
+        [JsonProperty("language")]
+        public string Language { get; set; }
+
+        [JsonProperty("languageID")]
+        public long LanguageID { get; set; }
+
+        [JsonProperty("recordedBy")]
+        public string RecordedBy { get; set; }
+
+        [JsonProperty("timeStartStd")]
+        public DateTime StartTime { get; set; }
+
+        [JsonProperty("timeEndStd")]
+        public DateTime EndTime { get; set; }
+
+        [JsonProperty("duration")]
+        public string Duration { get; set; }
+
+        [JsonProperty("success")]
+        public bool Success { get; set; }
+
+        [JsonProperty("isCM")]
+        public bool IsCM { get; set; }
+
+        public string DpsReportLink { get; set; }
+
+        public string HtmlPath { get; set; }
+
+        public List<LogPlayer> Players { get; set; }
     }
 }

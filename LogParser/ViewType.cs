@@ -4,9 +4,11 @@ using System.Text;
 
 namespace LogParser
 {
-    public enum ViewTypes
+    public enum ViewType
     {
         None = 0,
-        TestViewModel = 1,
+        LogParserViewModel = 1,
+        SettingsViewModel = 2,
+        AboutViewModel = 3,
     }
 }

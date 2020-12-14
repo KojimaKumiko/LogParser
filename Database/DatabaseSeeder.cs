@@ -1,9 +1,6 @@
 ﻿using Database.Models;
+using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Text;
 
 namespace Database
 {
@@ -11,12 +8,21 @@ namespace Database
     {
         public static void Seed(DatabaseContext context)
         {
-            context.Database.EnsureDeleted();
-            context.Database.EnsureCreated();
+            _ = context ?? throw new ArgumentNullException(nameof(context));
 
-            string json = File.ReadAllText(@"SeedData\20200717-195820_vg_kill.json");
-            context.Add(new ParsedLogFile { BossName = "Vale Guardian", Recorder = "Liz Monsuta", Json = json});
-            context.SaveChanges();
+            context.Database.Migrate();
+            bool shouldSeed = !SettingsManager.GetDatabaseSeeded(context);
+
+            if (shouldSeed)
+            {
+                context.Settings.Add(new Setting { Name = SettingsManager.DpsReport, Value = "False" });
+                context.Settings.Add(new Setting { Name = SettingsManager.UserToken, Value = string.Empty });
+                context.Settings.Add(new Setting { Name = SettingsManager.WebhookUrl, Value = string.Empty });
+                context.Settings.Add(new Setting { Name = SettingsManager.WebhookName, Value = string.Empty });
+                context.Settings.Add(new Setting { Name = SettingsManager.PostDiscord, Value = "False" });
+                context.Settings.Add(new Setting { Name = SettingsManager.Seeded, Value = "True" });
+                context.SaveChanges();
+            }
         }
     }
 }

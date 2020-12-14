@@ -1,0 +1,147 @@
+﻿<UserControl x:Class="LogParser.Views.LogParserView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:s="https://github.com/canton7/Stylet"
+             xmlns:local="clr-namespace:LogParser.Views"
+             xmlns:vm="clr-namespace:LogParser.ViewModels"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance vm:LogParserViewModel}"
+             d:DesignHeight="600" d:DesignWidth="800">
+    <materialDesign:DialogHost Identifier="RootDialogHost" DialogTheme="Inherit">
+        <materialDesign:DialogHost.DialogContentTemplate>
+            <DataTemplate>
+                <DataTemplate.Resources>
+                    <DataTemplate DataType="{x:Type vm:MessageViewModel}">
+                        <DockPanel Margin="10" Width="350" Height="100">
+                            <TextBlock Text="{Binding Message}" Margin="0, 10, 0, 0" HorizontalAlignment="Center" DockPanel.Dock="Top" FontSize="16" />
+                            <Button Content="Close" Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}" DockPanel.Dock="Bottom" VerticalAlignment="Bottom" />
+                        </DockPanel>
+                    </DataTemplate>
+                    <DataTemplate DataType="{x:Type vm:LogDetailsViewModel}">
+                        <local:LogDetailsView />
+                    </DataTemplate>
+                </DataTemplate.Resources>
+                <ContentControl Content="{Binding}" />
+            </DataTemplate>
+        </materialDesign:DialogHost.DialogContentTemplate>
+        <Grid x:Name="Grid">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="65" />
+                <RowDefinition Height="3*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" Margin="15 0 0 0">
+                <ComboBox Height="45" Width="225" FontSize="16"
+                          ItemsSource="{Binding BossNameFilters}" SelectionChanged="{s:Action BossFilterChanged}"
+                          SelectedItem="{Binding SelectedBossFilter, UpdateSourceTrigger=PropertyChanged}"
+                          materialDesign:HintAssist.Hint="Boss Name Filter" materialDesign:HintAssist.IsFloating="True" />
+            </StackPanel>
+
+            <DataGrid Name="LogGrid" Grid.Column="0" Grid.Row="1" Margin="10 10 0 0" ItemsSource="{Binding LogFiles}"
+                      AutoGenerateColumns="False"  CanUserAddRows="False" CanUserDeleteRows="False"
+                      IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow"
+                      IsSynchronizedWithCurrentItem="True" GridLinesVisibility="All"
+                      PreviewKeyDown="{s:Action DataGridKeyDown}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Boss" Binding="{Binding BossName}" />
+                    <DataGridTextColumn Header="Recorded by" Binding="{Binding RecordedBy}" />
+                    <DataGridTextColumn Header="Start Time" Binding="{Binding StartTime}" />
+                    <DataGridTextColumn Header="End Time" Binding="{Binding EndTime}" />
+                    <DataGridTextColumn Header="Fight Duration" Binding="{Binding Duration}" />
+                    <DataGridTextColumn Header="Killed" Binding="{Binding Success}" />
+                    <DataGridTemplateColumn x:Name="dpsReport" Header="Dps Report">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <ContentControl Name="Content">
+                                    <Hyperlink Command="{s:Action OpenLink}" CommandParameter="{Binding DpsReportLink}">
+                                        <TextBlock Name="Link" Text="{Binding Path=DataContext.DpsReportLink, ElementName=Content}" />
+                                    </Hyperlink>
+                                </ContentControl>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn x:Name="htmlPath" Header="Html-Report">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <ContentControl Name="Content">
+                                    <Hyperlink Command="{s:Action OpenLink}" CommandParameter="{Binding HtmlPath}">
+                                        <TextBlock Name="Link" Text="Open Report" />
+                                    </Hyperlink>
+                                </ContentControl>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+                <!--<behaviors:Interaction.Triggers>
+                    <behaviors:EventTrigger EventName="MouseDoubleClick" SourceObject="{Binding ElementName=LogGrid}">
+                        <behaviors:InvokeCommandAction Command="{Binding ShowDetailsCommand}" CommandParameter="{Binding LogFiles/}" />
+                    </behaviors:EventTrigger>
+                </behaviors:Interaction.Triggers>-->
+            </DataGrid>
+
+            <ProgressBar Grid.Column="0" Grid.Row="1" Value="0" IsIndeterminate="True" RenderTransformOrigin="0.5, 0.5"
+                         Style="{DynamicResource MaterialDesignCircularProgressBar}"
+                         Height="45" Width="45" VerticalAlignment="Center" HorizontalAlignment="Center"
+                         Visibility="{Binding IsLoadingData, Converter={x:Static s:BoolToVisibilityConverter.Instance}}">
+                <ProgressBar.RenderTransform>
+                    <ScaleTransform ScaleX="2" ScaleY="2" />
+                </ProgressBar.RenderTransform>
+            </ProgressBar>
+
+            <DataGrid x:Name="FileGrid" Grid.Column="1" Grid.Row="1" Margin="10 10 10 0"
+                      AutoGenerateColumns="False" ItemsSource="{Binding FilesToParse}"
+                      CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
+                      Visibility="{Binding CanParseFiles, Converter={x:Static s:BoolToVisibilityConverter.Instance}}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="File" Binding="{Binding}" />
+                    <DataGridTemplateColumn x:Name="removeFile">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="X" FontSize="13" Height="25" HorizontalAlignment="Left"
+                                        Command="{s:Action RemoveFile}" CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <WrapPanel Grid.Column="0" Grid.Row="2" Orientation="Horizontal" Margin="10 10 0 0">
+                <WrapPanel.Resources>
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Setter Property="Margin" Value="10 10 0 0" />
+                        <Setter Property="Height" Value="40" />
+                        <Setter Property="HorizontalAlignment" Value="Right" />
+                    </Style>
+                </WrapPanel.Resources>
+                <Button Content="Open File" Command="{s:Action SetFile}"/>
+                <Button Content="Parse Files" Command="{s:Action ParseFilesAsync}" />
+                <Button Content="{Binding UpdateEliteInsightsContent}" Command="{s:Action UpdateEliteInsights}" />
+                <Button Content="Post to Discord" Command="{s:Action SendToDiscord}"
+                        CommandParameter="{Binding ElementName=LogGrid, Path=SelectedItems}" />
+                <Button Content="Delete Selected Log" Command="{s:Action DeleteLogEntries}"
+                        CommandParameter="{Binding ElementName=LogGrid}" />
+                <Button Content="Refresh Grid" Command="{s:Action RefreshGrid}" />
+            </WrapPanel>
+
+            <StackPanel Grid.Column="1" Grid.Row="2" Margin="10 10 0 0">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Elite Insights Version: " FontSize="14" />
+                    <TextBlock Text="{Binding EliteInsightsVersion}" FontSize="14" />
+                </StackPanel>
+
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}"
+                             VerticalAlignment="Center" Margin="0 10 10 0" Height="15"
+                             Visibility="{Binding ShowProgressBar, Converter={x:Static s:BoolToVisibilityConverter.Instance}}" />
+            </StackPanel>
+        </Grid>
+    </materialDesign:DialogHost>
+</UserControl>

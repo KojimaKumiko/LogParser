@@ -11,9 +11,10 @@
         xmlns:utilities="clr-namespace:Utilities;assembly=Utilities"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:ShellViewModel}"
+        d:DesignHeight="450" d:DesignWidth="650"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         Background="{DynamicResource MaterialDesignPaper}"
-        Title="Stylet Project" Height="450" Width="800">
+        Title="Log Parser (WIP)" Height="750" Width="1200">
     <materialDesign:DrawerHost IsLeftDrawerOpen="{Binding ElementName=MenuToggleButton, Path=IsChecked}">
         <materialDesign:DrawerHost.LeftDrawerContent>
             <DockPanel MinWidth="212">
@@ -22,35 +23,6 @@
                               HorizontalAlignment="Right" Margin="16" 
                               IsChecked="{Binding ElementName=MenuToggleButton, Path=IsChecked, Mode=TwoWay}" />
                 <Menu>
-                    <!--<Menu.Resources>
-                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                            <Setter Property="utilities:TreeHelpers.Modifiers">
-                                <Setter.Value>
-                                    <utilities:ModifierCollection>
-                                        <utilities:Modifier Property="{x:Static Popup.PlacementProperty}" 
-                                                            Value="{x:Static PlacementMode.Right}" 
-                                                            TemplatePartName="PART_Popup" />
-                                    </utilities:ModifierCollection>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Menu.Resources>-->
-                    <!--<MenuItem Header="Item 1">
-                        <MenuItem Header="Sub Item 1" />
-                        <MenuItem Header="Sub Item 2" />
-                        <MenuItem Header="Sub Item 3" />
-                    </MenuItem>
-                    <MenuItem Header="Item 2">
-                        <MenuItem Header="Sub Item 1" />
-                        <MenuItem Header="Sub Item 2" />
-                        <MenuItem Header="Sub Item 3" />
-                    </MenuItem>
-                    <MenuItem Header="Item 3">
-                        <MenuItem Header="Sub Item 1" />
-                        <MenuItem Header="Sub Item 2" />
-                        <MenuItem Header="Sub Item 3" />
-                    </MenuItem>-->
-
                     <Menu.ItemsPanel>
                         <ItemsPanelTemplate>
                             <VirtualizingStackPanel />
@@ -64,7 +36,11 @@
                             </Style>
                         </MenuItem.Style>
                     </MenuItem>
-                    <MenuItem Header="Logger" Command="{s:Action SwitchView}" CommandParameter="{x:Static data:ViewTypes.TestViewModel}" />
+                    <MenuItem Header="Logger" Command="{s:Action SwitchView}" CommandParameter="{x:Static data:ViewType.LogParserViewModel}" />
+                    <Separator />
+                    <MenuItem Header="About" Command="{s:Action SwitchView}" CommandParameter="{x:Static data:ViewType.AboutViewModel}" />
+                    <Separator />
+                    <MenuItem Header="Settings" Command="{s:Action SwitchView}" CommandParameter="{x:Static data:ViewType.SettingsViewModel}" />
                 </Menu>
             </DockPanel>
         </materialDesign:DrawerHost.LeftDrawerContent>
@@ -84,11 +60,15 @@
                     </Grid.ColumnDefinitions>
                     <ToggleButton Style="{StaticResource MaterialDesignHamburgerToggleButton}" IsChecked="False"
                                   x:Name="MenuToggleButton" Grid.Column="0"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Version}" FontSize="16" FontWeight="Bold"
+                               VerticalAlignment="Center" HorizontalAlignment="Right" />
                 </Grid>
             </materialDesign:ColorZone>
 
             <ContentControl Grid.Row="1" s:View.Model="{Binding ActiveItem}" />
-            
+
+            <materialDesign:Snackbar Grid.Row="1" MessageQueue="{Binding MessageQueue}" />
+
         </Grid>
     </materialDesign:DrawerHost>
 </Window>

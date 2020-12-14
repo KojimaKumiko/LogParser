@@ -1,0 +1,74 @@
+﻿<UserControl x:Class="LogParser.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:s="https://github.com/canton7/Stylet"
+             xmlns:system="clr-namespace:System;assembly=mscorlib"
+             xmlns:local="clr-namespace:LogParser"
+             xmlns:cv="clr-namespace:LogParser.Converter"
+             xmlns:views="clr-namespace:LogParser.Views"
+             xmlns:vm="clr-namespace:LogParser.ViewModels"
+             xmlns:db="clr-namespace:Database;assembly=Database"
+             xmlns:bh="clr-namespace:Utilities;assembly=Utilities"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance vm:SettingsViewModel}"
+             d:DesignHeight="450" d:DesignWidth="900">
+    <Grid Background="{DynamicResource MaterialDesignPaper}">
+        <Grid.Resources>
+            <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="Width" Value="175" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+            </Style>
+
+            <Style x:Key="ContainerStackPanel" TargetType="StackPanel">
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="VerticalAlignment" Value="Top" />
+                <Setter Property="Margin" Value="25 25 0 0" />
+                <Setter Property="Orientation" Value="Vertical" />
+            </Style>
+        </Grid.Resources>
+
+        <behaviors:Interaction.Behaviors>
+            <bh:ClearFocusOnClickBehavior />
+        </behaviors:Interaction.Behaviors>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="75" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Column="0" Grid.Row="0" Style="{DynamicResource ContainerStackPanel}">
+            <CheckBox Content="{local:Loc UploadToDpsReport}" IsChecked="{Binding UploadDpsReport}"
+                      FontSize="16" materialDesign:CheckBoxAssist.CheckBoxSize="24" />
+            <CheckBox Content="Post to Discord" IsChecked="{Binding PostToDiscord}"
+                      FontSize="16" materialDesign:CheckBoxAssist.CheckBoxSize="24" Margin="0 10 0 0" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Grid.Row="0" Style="{DynamicResource ContainerStackPanel}">
+            <StackPanel Orientation="Horizontal">
+                <TextBox Text="{Binding UserToken}" Width="250"
+                         materialDesign:HintAssist.Hint="User Token" materialDesign:HintAssist.IsFloating="True" />
+                <Button Content="Generate Token" VerticalAlignment="Bottom" Margin="15 0 0 0"
+                        Command="{s:Action GenerateToken}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBox Text="{Binding WebhookUrl}" Margin="0 0 15 0" Width="250"
+                         materialDesign:HintAssist.Hint="Discord Webhook Url" materialDesign:HintAssist.IsFloating="True" />
+                <TextBox Text="{Binding WebhookName}" Width="185"
+                         materialDesign:HintAssist.Hint="Discord Webhook Name" materialDesign:HintAssist.IsFloating="True" />
+            </StackPanel>
+        </StackPanel>
+
+        <Button Grid.Column="0" Grid.Row="1" Content="Save"
+                Width="100" Height="35" HorizontalAlignment="Left"
+                Margin="25 0 0 0" Command="{s:Action SaveSettings}" />
+    </Grid>
+</UserControl>

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -13,11 +15,11 @@ using System.Windows.Shapes;
 namespace LogParser.Views
 {
     /// <summary>
-    /// Interaction logic for Shell.xaml
+    /// Interaction logic for LogDetailsView.xaml
     /// </summary>
-    public partial class ShellView : Window
+    public partial class LogDetailsView : UserControl
     {
-        public ShellView()
+        public LogDetailsView()
         {
             InitializeComponent();
         }

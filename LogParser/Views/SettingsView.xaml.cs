@@ -8,16 +8,17 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
 using System.Windows.Shapes;
 
 namespace LogParser.Views
 {
     /// <summary>
-    /// Interaction logic for Shell.xaml
+    /// Interaction logic for SettingsView.xaml
     /// </summary>
-    public partial class ShellView : Window
+    public partial class SettingsView : UserControl
     {
-        public ShellView()
+        public SettingsView()
         {
             InitializeComponent();
         }
