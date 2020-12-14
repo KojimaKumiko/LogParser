@@ -2,6 +2,7 @@
 using Serilog;
 using Stylet;
 using System;
+using System.Reflection;
 
 namespace LogParser.ViewModels
 {
@@ -11,19 +12,33 @@ namespace LogParser.ViewModels
 
         private readonly SettingsViewModel settingsViewModel;
 
+        private readonly AboutViewModel aboutViewModel;
+
         private SnackbarMessageQueue messageQueue;
 
-        public ShellViewModel(LogParserViewModel logParserViewModel, SettingsViewModel settingsViewModel, SnackbarMessageQueue messageQueue)
+        private string version;
+
+        public ShellViewModel(LogParserViewModel logParserViewModel, SettingsViewModel settingsViewModel, AboutViewModel aboutViewModel, SnackbarMessageQueue messageQueue)
         {
             this.logParserViewModel = logParserViewModel;
             this.settingsViewModel = settingsViewModel;
+            this.aboutViewModel = aboutViewModel;
             this.messageQueue = messageQueue;
+
+            var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
+            Version = $"Ver. {assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
         }
 
         public SnackbarMessageQueue MessageQueue
         {
             get { return messageQueue; }
             set { SetAndNotify(ref messageQueue, value); }
+        }
+
+        public string Version
+        {
+            get { return version; }
+            set { SetAndNotify(ref version, value); }
         }
 
         public void SwitchView(ViewType viewType)
@@ -35,6 +50,9 @@ namespace LogParser.ViewModels
                     break;
                 case ViewType.SettingsViewModel:
                     ActivateItem(settingsViewModel);
+                    break;
+                case ViewType.AboutViewModel:
+                    ActivateItem(aboutViewModel);
                     break;
                 default:
                     break;

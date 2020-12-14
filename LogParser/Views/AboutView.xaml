@@ -1,0 +1,59 @@
+﻿<UserControl x:Class="LogParser.Views.AboutView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:s="https://github.com/canton7/Stylet"
+             xmlns:local="clr-namespace:LogParser.Views"
+             xmlns:vm="clr-namespace:LogParser.ViewModels"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance vm:AboutViewModel}"
+             d:DesignHeight="600" d:DesignWidth="800">
+    <Grid>
+        <StackPanel Margin="0 15 0 0">
+            <StackPanel.Resources>
+                <Style TargetType="Ellipse">
+                    <Setter Property="Height" Value="10" />
+                    <Setter Property="Width" Value="10" />
+                    <Setter Property="Fill" Value="Black" />
+                    <Setter Property="Margin" Value="40 2 0 0" />
+                </Style>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                    <Setter Property="FontSize" Value="16" />
+                    <Setter Property="Margin" Value="25 3 0 0" />
+                </Style>
+                <Style x:Key="BulletPoint" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                    <Setter Property="Margin" Value="55 0 0 0" />
+                </Style>
+            </StackPanel.Resources>
+            <TextBlock>
+                The Application "Log Parser" (name subject to change) was created and developed by Kojima Kumiko.
+            </TextBlock>
+            <TextBlock>
+                The Source code for the Application can be found <Hyperlink Command="{s:Action OpenLink}" CommandParameter="https://github.com/KojimaKumiko/LogParser">Here</Hyperlink>
+            </TextBlock>
+            <TextBlock>
+                Found a bug? Have a suggestion for the App? Just create a <Hyperlink Command="{s:Action OpenLink}" CommandParameter="https://github.com/KojimaKumiko/LogParser/issues/new">new Issue</Hyperlink> and describe it.
+            </TextBlock>
+            <TextBlock Padding="0 0 0 5">
+                Ways of contacting me:
+            </TextBlock>
+            <BulletDecorator>
+                <BulletDecorator.Bullet>
+                    <Ellipse />
+                </BulletDecorator.Bullet>
+                <TextBlock Style="{DynamicResource BulletPoint}">
+                    <Hyperlink Command="{s:Action OpenLink}" CommandParameter="https://twitter.com/Kojima__Kumiko">Twitter</Hyperlink>
+                </TextBlock>
+            </BulletDecorator>
+            <BulletDecorator>
+                <BulletDecorator.Bullet>
+                    <Ellipse />
+                </BulletDecorator.Bullet>
+                <TextBlock Style="{DynamicResource BulletPoint}">Discord: Kojima Kumiko 小島久美子#1337</TextBlock>
+            </BulletDecorator>
+        </StackPanel>
+    </Grid>
+</UserControl>

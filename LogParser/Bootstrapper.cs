@@ -85,6 +85,7 @@ namespace LogParser
             // ViewModel bindings
             builder.Bind<LogParserViewModel>().ToSelf();
             builder.Bind<SettingsViewModel>().ToSelf();
+            builder.Bind<AboutViewModel>().ToSelf();
         }
 
         protected override void Configure()
