@@ -6,7 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Stylet;
 using StyletIoC;
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Serilog;
 using System.Threading.Tasks;
@@ -25,15 +24,8 @@ namespace LogParser
 
         public override void Dispose()
         {
-            if (messageQueue != null)
-            {
-                messageQueue.Dispose();
-            }
-
-            if (database != null)
-            {
-                database.Dispose();
-            }
+            messageQueue?.Dispose();
+            database?.Dispose();
 
             base.Dispose();
             GC.SuppressFinalize(this);
@@ -64,13 +56,12 @@ namespace LogParser
 
             messageQueue = new SnackbarMessageQueue();
 
-            Log.Debug("Configuration done.");
+            Log.Debug("Configuration done");
         }
 
-        [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "The method and it's parameter is provided by Stylet and get's called from it.")]
         protected override void ConfigureIoC(IStyletIoCBuilder builder)
         {
-            Log.Debug("Configuring IoC.");
+            Log.Debug("Configuring IoC");
 
             // Instance bindings
             builder.Bind<IConfiguration>().ToInstance(configuration);
@@ -78,7 +69,7 @@ namespace LogParser
             builder.Bind<SnackbarMessageQueue>().ToInstance(messageQueue).DisposeWithContainer(false);
 
             // Service/Controller bindings
-            builder.Bind<DpsReportController>().ToSelf();
+            builder.Bind<DpsReportService>().ToSelf();
             builder.Bind<IParseService>().To<ParseService>();
             builder.Bind<IDiscordService>().To<DiscordService>();
 
@@ -86,15 +77,15 @@ namespace LogParser
             builder.Bind<LogParserViewModel>().ToSelf();
             builder.Bind<SettingsViewModel>().ToSelf();
             builder.Bind<AboutViewModel>().ToSelf();
+            builder.Bind<LogFilesViewModel>().ToSelf();
         }
 
         protected override void Configure()
         {
-            Log.Debug("Seeding database.");
+            Log.Debug("Seeding database");
             DatabaseSeeder.Seed(database);
         }
 
-        [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "The hook get's called through Stylets bootstrapper.")]
         protected override void OnUnhandledException(DispatcherUnhandledExceptionEventArgs e)
         {
             Log.Error(e.Exception, "Application.Current.DispatcherUnhandledException");

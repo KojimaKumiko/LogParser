@@ -22,7 +22,7 @@ namespace LogParserTests.ViewModels
 		{
 			// Arrange
 			var dummyParseController = A.Dummy<ParseService>();
-			var dummyDpsReportController = A.Dummy<DpsReportController>();
+			var dummyDpsReportController = A.Dummy<DpsReportService>();
 
 			// Act
 			//Action viewModel = () => new LogParserViewModel(null, dummyParseController, dummyDpsReportController);
@@ -37,7 +37,7 @@ namespace LogParserTests.ViewModels
 			// Arrange
 			var dummyContext = A.Fake<DatabaseContext>(
 				x => x.WithArgumentsForConstructor(() => new DatabaseContext(new DbContextOptionsBuilder<DatabaseContext>().Options)));
-			var dummyDpsReportController = A.Dummy<DpsReportController>();
+			var dummyDpsReportController = A.Dummy<DpsReportService>();
 
 			// Act
 			//Action viewModel = () => new LogParserViewModel(dummyContext, null, dummyDpsReportController);
@@ -68,7 +68,7 @@ namespace LogParserTests.ViewModels
 			var dummyContext = A.Fake<DatabaseContext>(
 				x => x.WithArgumentsForConstructor(() => new DatabaseContext(new DbContextOptionsBuilder<DatabaseContext>().Options)));
 			var dummyParseController = A.Dummy<ParseService>();
-			var dummyDpsReportController = A.Dummy<DpsReportController>();
+			var dummyDpsReportController = A.Dummy<DpsReportService>();
 
 			// Act
 			//var viewModel = new LogParserViewModel(dummyContext, dummyParseController, dummyDpsReportController);
@@ -90,7 +90,7 @@ namespace LogParserTests.ViewModels
 			var dummyContext = A.Fake<DatabaseContext>(
 				x => x.WithArgumentsForConstructor(() => new DatabaseContext(new DbContextOptionsBuilder<DatabaseContext>().Options)));
 			var fakeParseController = A.Fake<IParseService>();
-			var dummyDpsReportController = A.Dummy<DpsReportController>();
+			var dummyDpsReportController = A.Dummy<DpsReportService>();
 
 			string fileVersion = "1.2.3.4";
 			A.CallTo(() => fakeParseController.GetFileVersionInfo()).Returns(fileVersion);
@@ -115,7 +115,7 @@ namespace LogParserTests.ViewModels
 			var dummyContext = A.Fake<DatabaseContext>(
 				x => x.WithArgumentsForConstructor(() => new DatabaseContext(new DbContextOptionsBuilder<DatabaseContext>().Options)));
 			var fakeParseController = A.Fake<IParseService>();
-			var dummyDpsReportController = A.Dummy<DpsReportController>();
+			var dummyDpsReportController = A.Dummy<DpsReportService>();
 
 			//var viewModel = new LogParserViewModel(dummyContext, fakeParseController, dummyDpsReportController);
 

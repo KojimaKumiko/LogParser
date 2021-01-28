@@ -1,0 +1,34 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+                    xmlns:local="clr-namespace:LogParser.Resources"
+                    xmlns:vm="clr-namespace:LogParser.ViewModels"
+                    xmlns:views="clr-namespace:LogParser.Views"
+                    xmlns:lic="clr-namespace:LogParser.Licenses">
+
+    <DataTemplate DataType="{x:Type vm:MessageViewModel}">
+        <DockPanel Margin="10" Width="350" Height="100">
+            <TextBlock Text="{Binding Message}" Margin="0, 10, 0, 0" HorizontalAlignment="Center" DockPanel.Dock="Top" FontSize="16" />
+            <Button Content="Close" Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}" DockPanel.Dock="Bottom" VerticalAlignment="Bottom" />
+        </DockPanel>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:LogDetailsViewModel}">
+        <views:LogDetailsView />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type lic:LogParserLicense}">
+        <DockPanel>
+            <StackPanel Margin="10" Width="550" Height="450" DockPanel.Dock="Top">
+                <TextBlock Text="{Binding Product}" FontSize="18" FontWeight="Bold" />
+                <StackPanel Orientation="Horizontal" Margin="0 10 0 15">
+                    <TextBlock Text="{Binding LicenseType}" />
+                    <TextBlock Text="{Binding Owner}" Margin="10 0 0 0" />
+                </StackPanel>
+                <TextBlock Text="{Binding Content}" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Content="Close" Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}"
+                    DockPanel.Dock="Bottom" VerticalAlignment="Bottom" />
+        </DockPanel>
+    </DataTemplate>
+</ResourceDictionary>

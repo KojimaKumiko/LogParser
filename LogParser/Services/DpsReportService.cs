@@ -1,28 +1,24 @@
 ﻿using LogParser.Models;
 using LogParser.Models.Interfaces;
-using Microsoft.Xaml.Behaviors.Media;
 using Newtonsoft.Json.Linq;
 using RestEase;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace LogParser.Services
 {
-    public class DpsReportController
+    public class DpsReportService
     {
-        private static readonly Uri dpsReportUri = new Uri(@"https://dps.report");
+        private static readonly Uri DpsReportUri = new Uri(@"https://dps.report");
+        private readonly IDpsReport dpsReportApi;
 
-        private IDpsReport dpsReportApi;
-
-        public DpsReportController()
+        public DpsReportService()
         {
-            dpsReportApi = RestClient.For<IDpsReport>(dpsReportUri);
+            dpsReportApi = RestClient.For<IDpsReport>(DpsReportUri);
         }
 
         public async Task<DPSReport> UploadToDpsReport(string file, string userToken)
@@ -32,11 +28,11 @@ namespace LogParser.Services
                 throw new ArgumentNullException(nameof(file));
             }
 
-            string fileName = file.Split("\\").Last();
-            byte[] fileContent = await File.ReadAllBytesAsync(file).ConfigureAwait(false);
+            var fileName = file.Split("\\").Last();
+            var fileContent = await File.ReadAllBytesAsync(file).ConfigureAwait(false);
 
-            using MultipartFormDataContent multiPartContent = new MultipartFormDataContent("----myBoundary");
-            using ByteArrayContent byteArrayContent = new ByteArrayContent(fileContent);
+            using var multiPartContent = new MultipartFormDataContent("----myBoundary");
+            using var byteArrayContent = new ByteArrayContent(fileContent);
 
             byteArrayContent.Headers.Add("Content-Type", "application/octet-stream");
             multiPartContent.Add(byteArrayContent, "file", fileName);
@@ -63,7 +59,7 @@ namespace LogParser.Services
                 return string.Empty;
             }
 
-            JObject job = JObject.Parse(response);
+            var job = JObject.Parse(response);
             return job.Value<string>("userToken");
         }
     }

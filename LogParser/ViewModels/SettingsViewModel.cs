@@ -11,7 +11,7 @@ namespace LogParser.ViewModels
     {
         private readonly DatabaseContext dbContext;
 
-        private readonly DpsReportController dpsReportController;
+        private readonly DpsReportService dpsReportService;
 
         private bool uploadDspReport;
 
@@ -25,10 +25,10 @@ namespace LogParser.ViewModels
 
         private SnackbarMessageQueue messageQueue;
 
-        public SettingsViewModel(DatabaseContext dbContext, DpsReportController dpsReportController, SnackbarMessageQueue messageQueue)
+        public SettingsViewModel(DatabaseContext dbContext, DpsReportService dpsReportService, SnackbarMessageQueue messageQueue)
         {
             this.dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-            this.dpsReportController = dpsReportController ?? throw new ArgumentNullException(nameof(dpsReportController));
+            this.dpsReportService = dpsReportService ?? throw new ArgumentNullException(nameof(dpsReportService));
             this.messageQueue = messageQueue ?? throw new ArgumentNullException(nameof(messageQueue));
 
             _ = LoadDataFromDatabase();
@@ -66,7 +66,7 @@ namespace LogParser.ViewModels
 
         public async Task GenerateToken()
         {
-            UserToken = await dpsReportController.GetUserToken().ConfigureAwait(true);
+            UserToken = await dpsReportService.GetUserToken().ConfigureAwait(true);
         }
 
         public async Task SaveSettings()

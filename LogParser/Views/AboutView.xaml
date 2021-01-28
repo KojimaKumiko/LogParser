@@ -29,23 +29,29 @@
                 </Style>
             </StackPanel.Resources>
             <TextBlock>
-                The Application "Log Parser" (name subject to change) was created and developed by Kojima Kumiko.
+                    The Application "Log Parser" (name subject to change) was created and developed by Kojima Kumiko.
             </TextBlock>
             <TextBlock>
-                The Source code for the Application can be found <Hyperlink Command="{s:Action OpenLink}" CommandParameter="https://github.com/KojimaKumiko/LogParser">Here</Hyperlink>
+                    The Source code for the Application can be found <Hyperlink Command="{s:Action OpenLink}" CommandParameter="https://github.com/KojimaKumiko/LogParser">Here</Hyperlink>
             </TextBlock>
             <TextBlock>
-                Found a bug? Have a suggestion for the App? Just create a <Hyperlink Command="{s:Action OpenLink}" CommandParameter="https://github.com/KojimaKumiko/LogParser/issues/new">new Issue</Hyperlink> and describe it.
+                    <Hyperlink Command="{s:Action ShowLicense}">The license for the Application</Hyperlink>
+            </TextBlock>
+            <!-- <TextBlock> -->
+            <!--     <Hyperlink Command="{s:Action ShowThirdPartyLicenses}">All the 3rd Party licenses.</Hyperlink> -->
+            <!-- </TextBlock> -->
+            <TextBlock>
+                    Found a bug? Have a suggestion for the App? Just create a <Hyperlink Command="{s:Action OpenLink}" CommandParameter="https://github.com/KojimaKumiko/LogParser/issues/new">new Issue</Hyperlink> and describe it.
             </TextBlock>
             <TextBlock Padding="0 0 0 5">
-                Ways of contacting me:
+                    Ways of contacting me:
             </TextBlock>
             <BulletDecorator>
                 <BulletDecorator.Bullet>
                     <Ellipse />
                 </BulletDecorator.Bullet>
                 <TextBlock Style="{DynamicResource BulletPoint}">
-                    <Hyperlink Command="{s:Action OpenLink}" CommandParameter="https://twitter.com/Kojima__Kumiko">Twitter</Hyperlink>
+                        <Hyperlink Command="{s:Action OpenLink}" CommandParameter="https://twitter.com/Kojima__Kumiko">Twitter</Hyperlink>
                 </TextBlock>
             </BulletDecorator>
             <BulletDecorator>

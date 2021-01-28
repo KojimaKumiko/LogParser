@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace LogParser.Models.Enums
+﻿namespace LogParser.Models.Enums
 {
     public enum Install
     {

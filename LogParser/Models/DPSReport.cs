@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace LogParser.Models
+﻿namespace LogParser.Models
 {
     public class DPSReport
     {
