@@ -109,6 +109,10 @@ namespace LogParser
             {
                 CheckVersion();
             }
+
+            var updateTask = SettingsManager.UpdateSetting(database, DateTime.Now.ToShortDateString(), SettingsManager.UpdateCheck);
+            updateTask.ConfigureAwait(true).GetAwaiter().GetResult();
+            database.SaveChanges();
         }
 
         protected override void OnUnhandledException(DispatcherUnhandledExceptionEventArgs e)

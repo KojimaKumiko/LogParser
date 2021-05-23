@@ -147,7 +147,7 @@ namespace Database
 
             if (setting != null && !string.IsNullOrWhiteSpace(setting.Value))
             {
-                date = Convert.ToDateTime(setting.Value, CultureInfo.InvariantCulture);
+                date = Convert.ToDateTime(setting.Value, CultureInfo.CurrentCulture);
             }
 
             return date;

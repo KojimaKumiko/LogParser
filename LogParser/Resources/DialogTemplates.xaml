@@ -18,24 +18,29 @@
     </Style>
     
     <DataTemplate DataType="{x:Type models:MessageDialog}">
-        <DockPanel Margin="10" Width="350" Height="100">
+        <DockPanel Margin="15 10 15 10">
             <TextBlock Text="{Binding Message}" Style="{DynamicResource messageDialog}" />
-            <Button Content="Close" Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}" DockPanel.Dock="Bottom" VerticalAlignment="Bottom" />
+            <Button Content="Close" Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}"
+                    DockPanel.Dock="Bottom" VerticalAlignment="Bottom" Margin="0 10 0 10" />
         </DockPanel>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type models:VersionDialog}">
-        <DockPanel Margin="10" Width="350" Height="100">
+        <DockPanel Margin="15 10 15 10">
             <TextBlock Visibility="{Binding NewVersionAvailable, Converter={x:Static s:BoolToVisibilityConverter.Instance}}"
                        Style="{DynamicResource messageDialog}">
-                A new version is available!
-                You can download it here: <Hyperlink Command="{s:Action OpenLink, Target={x:Type lp:Helper}}" CommandParameter="{Binding Message}"><TextBlock Text="{Binding Message}" /></Hyperlink>
+                A new version is available! <LineBreak />
+                You can download it here:
+                <Hyperlink Command="{s:Action OpenLink, Target={x:Type lp:Helper}}" CommandParameter="{Binding Message}" TextDecorations="None">
+                    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                </Hyperlink>
             </TextBlock>
             <TextBlock Visibility="{Binding NewVersionAvailable, Converter={x:Static s:BoolToVisibilityConverter.InverseInstance}}"
                        Style="{DynamicResource messageDialog}">
                 Your version is up to date!
             </TextBlock>
-            <Button Content="Close" Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}" DockPanel.Dock="Bottom" VerticalAlignment="Bottom" />
+            <Button Content="Close" Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}"
+                    DockPanel.Dock="Bottom" VerticalAlignment="Bottom" Margin="0 10 0 10" />
         </DockPanel>
     </DataTemplate>
 
