@@ -1,7 +1,9 @@
 ﻿using Database.Models;
+using LogParser.Models;
 using LogParser.Models.Enums;
 using LogParser.Models.Interfaces;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using RestEase;
 using System;
 using System.Collections.Generic;
@@ -18,9 +20,6 @@ namespace LogParser.Services
 {
     public class ParseService : IParseService
     {
-        private static Dictionary<string, Dictionary<string, PropertyInfo>> JsonProperties { get; }
-            = new Dictionary<string, Dictionary<string, PropertyInfo>>();
-
         public ParseService()
         {
         }
@@ -38,14 +37,14 @@ namespace LogParser.Services
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        /// <param name="fileName"><inheritdoc/></param>
+        /// <param name="fileNames"><inheritdoc/></param>
         /// <param name="htmlPath"><inheritdoc/></param>
         /// <returns><inheritdoc/></returns>
-        public async Task<ParsedLogFile> ParseSingleFile(string fileName, string htmlPath)
+        public ParsedLogFileDto ParseSingleFile(IEnumerable<string> fileNames, string htmlPath)
         {
-            if (string.IsNullOrWhiteSpace(fileName))
+            if (fileNames == null || !fileNames.Any())
             {
-                throw new ArgumentNullException(nameof(fileName));
+                throw new ArgumentNullException(nameof(fileNames));
             }
 
             if (!IsInstalled())
@@ -53,148 +52,73 @@ namespace LogParser.Services
                 throw new InvalidOperationException("There is no local installation of Elite Insights.");
             }
 
-            string path = Path.Combine(AssemblyLocation, BaseEIPath);
+            string jsonFile = fileNames.First(f => f.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase));
 
-            string logPath = Path.Combine(path, BaseLogPath);
-            if (!Directory.Exists(logPath))
+            using var reader = File.OpenText(jsonFile);
+            using var jsonReader = new JsonTextReader(reader);
+            JObject jsonData = (JObject)JToken.ReadFrom(jsonReader);
+
+            var logPlayers = ((JArray)jsonData["players"]).Select(player =>
             {
-                Directory.CreateDirectory(logPath);
-            }
+                JObject dpsTargetJson = (JObject)player["dpsTargets"].First.First;
+                var dpsTarget = new DpsTargetDto(dpsTargetJson);
 
-            IEnumerable<string> parsedFiles = await ParseFile(fileName, path, logPath).ConfigureAwait(false);
+                return new LogPlayerDto((JObject)player, new List<DpsTargetDto>() { dpsTarget });
+            }).ToList();
 
-            string jsonFile = parsedFiles.First(f => f.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase));
-            using StreamReader sr = File.OpenText(jsonFile);
-            using JsonReader reader = new JsonTextReader(sr);
-
-            string currentProp = string.Empty;
-            string[] propsToSkip = new string[]
-            {
-                    "targets",
-                    //"players",
-                    "phases",
-                    "mechanics",
-                    "uploadLinks",
-                    "skillMap",
-                    "buffMap",
-                    "damageModMap",
-                    "personalBuffs",
-                    "weapons",
-                    "targetDamage1S",
-                    "targetDamageDist",
-                    "statsTargets",
-                    "support",
-                    "damageModifiers",
-                    "damageModifiersTarget",
-                    "buffUptimes",
-                    "selfBuffs",
-                    "groupBuffs",
-                    "offGroupBuffs",
-                    "squadBuffs",
-                    "buffUptimesActive",
-                    "selfBuffsActive",
-                    "groupBuffsActive",
-                    "offGroupBuffsActive",
-                    "squadBuffsActive",
-                    "consumables",
-                    "activeTimes",
-                    "minions",
-                    "dpsAll",
-                    "statsAll",
-                    "defenses",
-                    "totalDamageDist",
-                    "totalDamageTaken",
-                    "rotation",
-                    "actorPowerDamage",
-            };
-
-            ParsedLogFile logFile = new ParsedLogFile();
-            logFile.Players = new List<LogPlayer>();
-
-            List<LogPlayer> logPlayers = new List<LogPlayer>();
-            LogPlayer logPlayer = new LogPlayer();
-
-            DpsTarget dpsTarget = new DpsTarget();
-
-            bool parseLogFile = true;
-            bool parsePlayers = false;
-            bool parseDpsTargets = false;
-
-            while (await reader.ReadAsync().ConfigureAwait(false))
-            {
-                if (reader.Value != null)
-                {
-                    if (reader.TokenType == JsonToken.PropertyName)
-                    {
-                        currentProp = reader.Value.ToString();
-
-                        if (currentProp.Equals("players", StringComparison.OrdinalIgnoreCase))
-                        {
-                            parsePlayers = true;
-                        }
-                        else if (currentProp.Equals("dpsTargets", StringComparison.OrdinalIgnoreCase))
-                        {
-                            parseDpsTargets = true;
-                        }
-                    }
-
-                    if (reader.TokenType != JsonToken.PropertyName)
-                    {
-                        if (parseLogFile)
-                        {
-                            PopulateLogFile(logFile, currentProp, reader.Value);
-                        }
-                        else if (parsePlayers)
-                        {
-                            if (parseDpsTargets)
-                            {
-                                PopulateLogFile(dpsTarget, currentProp, reader.Value);
-                            }
-                            else
-                            {
-                                PopulateLogFile(logPlayer, currentProp, reader.Value);
-                            }
-                        }
-                    }
-                }
-                else if ((reader.TokenType == JsonToken.StartArray || reader.TokenType == JsonToken.StartObject) && propsToSkip.Contains(currentProp))
-                {
-                    Task skipTask = reader.SkipAsync();
-                    parseLogFile = false;
-
-                    if (currentProp.Equals("rotation", StringComparison.OrdinalIgnoreCase))
-                    {
-                        logPlayer.DpsTargets = new List<DpsTarget> { dpsTarget };
-                        dpsTarget = new DpsTarget();
-
-                        logPlayers.Add(logPlayer);
-                        logPlayer = new LogPlayer();
-
-                        currentProp = string.Empty;
-                    }
-
-                    await skipTask.ConfigureAwait(false);
-                }
-                else if (reader.TokenType == JsonToken.EndObject && currentProp.Equals("actorPowerDamage", StringComparison.OrdinalIgnoreCase))
-                {
-                    parseDpsTargets = false;
-                }
-            }
+            var parsedLogFile = new ParsedLogFileDto(jsonData, logPlayers);
 
             if (!Directory.Exists(htmlPath))
             {
                 Directory.CreateDirectory(htmlPath);
             }
 
-            string htmlFile = parsedFiles.First(f => f.EndsWith(".html", StringComparison.InvariantCultureIgnoreCase));
+            string htmlFile = fileNames.First(f => f.EndsWith(".html", StringComparison.InvariantCultureIgnoreCase));
             string htmlFileName = Path.GetFileName(htmlFile);
             htmlPath = Path.Combine(htmlPath, htmlFileName);
             File.Move(htmlFile, htmlPath, true);
-            logFile.HtmlPath = htmlPath;
+            parsedLogFile.HtmlPath = htmlPath;
 
-            logFile.Players.AddRange(logPlayers);
+            return parsedLogFile;
+        }
 
-            return logFile;
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <param name="fileName"> <inheritdoc/> </param>
+        /// <param name="eiPath"> <inheritdoc/> </param>
+        /// <param name="logPath"> <inheritdoc/> </param>
+        /// <returns> <inheritdoc/> </returns>
+        public async Task<IEnumerable<string>> ParseFiles(IEnumerable<string> fileNames, string eiPath, string logPath)
+        {
+            string config = GetConfig(eiPath);
+            string args = $"-p -c \"{config}\" \"{string.Join("\" \"", fileNames)}\"";
+            var processInfo = new ProcessStartInfo
+            {
+                FileName = Path.Combine(eiPath, EliteInsightsExecutable),
+                WorkingDirectory = eiPath,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                Arguments = args,
+            };
+
+            using Process process = new()
+            {
+                StartInfo = processInfo,
+            };
+
+            // Start the process and wait for it until it's finished.
+            Task processTask = Task.Run(() =>
+            {
+                process.Start();
+                process.WaitForExit();
+                process.Close();
+            });
+
+            await processTask.ConfigureAwait(false);
+
+            return Directory.EnumerateFiles(logPath);
         }
 
         /// <summary>
@@ -306,79 +230,6 @@ namespace LogParser.Services
             File.AppendAllLines(destConfig, new string[] { @$"OutLocation={logPath}" });
 
             return destConfig;
-        }
-
-        private async Task<IEnumerable<string>> ParseFile(string fileName, string eiPath, string logPath)
-        {
-            string config = GetConfig(eiPath);
-            string args = $"-p -c \"{config}\" \"{fileName}\"";
-            var processInfo = new ProcessStartInfo
-            {
-                FileName = Path.Combine(eiPath, EliteInsightsExecutable),
-                WorkingDirectory = eiPath,
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                Arguments = args,
-            };
-
-            using Process process = new Process
-            {
-                StartInfo = processInfo,
-            };
-
-            // Start the process and wait for it until it's finished.
-            Task processTask = Task.Run(() =>
-            {
-                process.Start();
-                process.WaitForExit();
-                process.Close();
-            });
-
-            await processTask.ConfigureAwait(false);
-
-            return Directory.EnumerateFiles(logPath);
-        }
-
-        private void PopulateLogFile<T>(T logObject, string propertyName, object value)
-        {
-            var logType = logObject.GetType();
-            if (JsonProperties.Count <= 0 || !JsonProperties.ContainsKey(logType.Name))
-            {
-                var dictionary = new Dictionary<string, PropertyInfo>();
-                var properties = logType.GetProperties();
-
-                foreach (var prop in properties)
-                {
-                    JsonPropertyAttribute jsonPropertyAttribute = (JsonPropertyAttribute)Attribute.GetCustomAttribute(prop, typeof(JsonPropertyAttribute));
-                    if (jsonPropertyAttribute != null)
-                    {
-                        dictionary.Add(jsonPropertyAttribute.PropertyName, prop);
-                    }
-                }
-
-                JsonProperties.Add(logType.Name, dictionary);
-            }
-
-            JsonProperties.TryGetValue(logType.Name, out var jsonDictionary);
-
-            if (jsonDictionary == null)
-            {
-                return;
-            }
-
-            jsonDictionary.TryGetValue(propertyName, out var propInfo);
-            if (propInfo == null)
-            {
-                return;
-            }
-
-            if (propInfo.PropertyType == typeof(DateTime))
-            {
-                value = Convert.ToDateTime(value, CultureInfo.InvariantCulture);
-            }
-
-            propInfo.SetValue(logObject, value);
         }
     }
 }

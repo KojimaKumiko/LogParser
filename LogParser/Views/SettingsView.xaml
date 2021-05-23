@@ -67,8 +67,13 @@
             </StackPanel>
         </StackPanel>
 
-        <Button Grid.Column="0" Grid.Row="1" Content="Save"
-                Width="100" Height="35" HorizontalAlignment="Left"
-                Margin="25 0 0 0" Command="{s:Action SaveSettings}" />
+        <StackPanel Grid.Column="0" Grid.Row="1" Orientation="Horizontal">
+            <Button Content="Save" Width="100" Height="35"
+                    HorizontalAlignment="Left" Margin="25 0 0 0"
+                    Command="{s:Action SaveSettings}" />
+
+            <Button Content="Check Version" Width="150" Height="35" Margin="15 0 0 0"
+                    HorizontalAlignment="Left" Command="{s:Action CheckVersion}" />
+        </StackPanel>
     </Grid>
 </UserControl>

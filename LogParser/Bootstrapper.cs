@@ -11,6 +11,8 @@ using Serilog;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using MaterialDesignThemes.Wpf;
+using AutoMapper;
+using LogParser.Models;
 
 namespace LogParser
 {
@@ -21,6 +23,8 @@ namespace LogParser
         private DatabaseContext database;
 
         private SnackbarMessageQueue messageQueue;
+
+        private MapperConfiguration mapperConfig;
 
         public override void Dispose()
         {
@@ -46,6 +50,12 @@ namespace LogParser
                 .ReadFrom.Configuration(configuration)
                 .CreateLogger();
 
+            mapperConfig = new MapperConfiguration(cfg =>
+            {
+                cfg.DisableConstructorMapping();
+                cfg.AddProfile<MapperProfile>();
+            });
+
             var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
 
             optionsBuilder.UseSqlite(configuration.GetConnectionString("Database"));
@@ -65,6 +75,7 @@ namespace LogParser
 
             // Instance bindings
             builder.Bind<IConfiguration>().ToInstance(configuration);
+            builder.Bind<IMapper>().ToInstance(mapperConfig.CreateMapper());
             builder.Bind<DatabaseContext>().ToInstance(database).DisposeWithContainer(false);
             builder.Bind<SnackbarMessageQueue>().ToInstance(messageQueue).DisposeWithContainer(false);
 
@@ -86,6 +97,20 @@ namespace LogParser
             DatabaseSeeder.Seed(database);
         }
 
+        /// <summary>
+        /// Called just after the root view has been displayed.
+        /// </summary>
+        protected override void OnLaunch()
+        {
+            var lastCheck = SettingsManager.GetLastUpdateCheck(database);
+            var timeSpan = DateTime.Now.Subtract(lastCheck);
+
+            if (timeSpan.Days >= 7)
+            {
+                CheckVersion();
+            }
+        }
+
         protected override void OnUnhandledException(DispatcherUnhandledExceptionEventArgs e)
         {
             Log.Error(e.Exception, "Application.Current.DispatcherUnhandledException");
@@ -102,6 +127,16 @@ namespace LogParser
                 Log.Error(e.Exception, "TaskScheduler.UnobservedTaskException");
                 e.SetObserved();
             };
+        }
+
+        private static async void CheckVersion()
+        {
+            string link = await Helper.CheckForNewVersion();
+            if (!string.IsNullOrWhiteSpace(link))
+            {
+                var versionDialog = new VersionDialog(link);
+                await DialogHost.Show(versionDialog, "RootDialogHost").ConfigureAwait(true);
+            }
         }
     }
 }

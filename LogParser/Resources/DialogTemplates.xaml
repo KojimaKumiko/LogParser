@@ -1,14 +1,40 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:s="https://github.com/canton7/Stylet"
                     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
                     xmlns:local="clr-namespace:LogParser.Resources"
+                    xmlns:lp="clr-namespace:LogParser"
                     xmlns:vm="clr-namespace:LogParser.ViewModels"
                     xmlns:views="clr-namespace:LogParser.Views"
+                    xmlns:models="clr-namespace:LogParser.Models"
                     xmlns:lic="clr-namespace:LogParser.Licenses">
 
-    <DataTemplate DataType="{x:Type vm:MessageViewModel}">
+    <Style TargetType="TextBlock" x:Key="messageDialog">
+        <Setter Property="Margin" Value="0, 10, 0, 0" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="DockPanel.Dock" Value="Top" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    
+    <DataTemplate DataType="{x:Type models:MessageDialog}">
         <DockPanel Margin="10" Width="350" Height="100">
-            <TextBlock Text="{Binding Message}" Margin="0, 10, 0, 0" HorizontalAlignment="Center" DockPanel.Dock="Top" FontSize="16" />
+            <TextBlock Text="{Binding Message}" Style="{DynamicResource messageDialog}" />
+            <Button Content="Close" Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}" DockPanel.Dock="Bottom" VerticalAlignment="Bottom" />
+        </DockPanel>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type models:VersionDialog}">
+        <DockPanel Margin="10" Width="350" Height="100">
+            <TextBlock Visibility="{Binding NewVersionAvailable, Converter={x:Static s:BoolToVisibilityConverter.Instance}}"
+                       Style="{DynamicResource messageDialog}">
+                A new version is available!
+                You can download it here: <Hyperlink Command="{s:Action OpenLink, Target={x:Type lp:Helper}}" CommandParameter="{Binding Message}"><TextBlock Text="{Binding Message}" /></Hyperlink>
+            </TextBlock>
+            <TextBlock Visibility="{Binding NewVersionAvailable, Converter={x:Static s:BoolToVisibilityConverter.InverseInstance}}"
+                       Style="{DynamicResource messageDialog}">
+                Your version is up to date!
+            </TextBlock>
             <Button Content="Close" Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}" DockPanel.Dock="Bottom" VerticalAlignment="Bottom" />
         </DockPanel>
     </DataTemplate>

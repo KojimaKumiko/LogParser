@@ -1,14 +1,21 @@
 ﻿using Database;
+using LogParser.Models;
+using LogParser.Models.Interfaces;
 using LogParser.Services;
 using MaterialDesignThemes.Wpf;
+using RestEase;
 using Stylet;
 using System;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace LogParser.ViewModels
 {
     public class SettingsViewModel : Screen
     {
+        private const string DialogIdentifier = "RootDialogHost";
+
         private readonly DatabaseContext dbContext;
 
         private readonly DpsReportService dpsReportService;
@@ -80,6 +87,13 @@ namespace LogParser.ViewModels
             await dbContext.SaveChangesAsync().ConfigureAwait(true);
 
             messageQueue.Enqueue("Settings succesfully saved.");
+        }
+
+        public async Task CheckVersion()
+        {
+            string link = await Helper.CheckForNewVersion();
+            var versionDialog = new VersionDialog(link);
+            await DialogHost.Show(versionDialog, DialogIdentifier).ConfigureAwait(true);
         }
 
         private async Task LoadDataFromDatabase()

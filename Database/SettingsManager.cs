@@ -27,6 +27,8 @@ namespace Database
 
         public static string Seeded => "Seeded";
 
+        public static string UpdateCheck => "LastUpdateCheck";
+
         public static async Task<List<Setting>> GetSettings(DatabaseContext dbContext)
         {
             if (dbContext == null)
@@ -130,6 +132,25 @@ namespace Database
             }
 
             setting.Value = value;
+        }
+
+        public static DateTime GetLastUpdateCheck(DatabaseContext dbContext)
+        {
+            if (dbContext == null)
+            {
+                throw new ArgumentNullException(nameof(dbContext));
+            }
+
+            Setting setting = dbContext.Settings.SingleOrDefault(s => s.Name == UpdateCheck);
+
+            DateTime date = default;
+
+            if (setting != null && !string.IsNullOrWhiteSpace(setting.Value))
+            {
+                date = Convert.ToDateTime(setting.Value, CultureInfo.InvariantCulture);
+            }
+
+            return date;
         }
     }
 }

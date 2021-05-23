@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Database.Models;
+using LogParser.Models;
 
 namespace LogParser.Events
 {
@@ -9,11 +9,11 @@ namespace LogParser.Events
 
     public class ParsingFinishedEvent
     {
-        public ParsingFinishedEvent(List<ParsedLogFile> parsedLogFiles)
+        public ParsingFinishedEvent(List<ParsedLogFileDto> parsedLogFiles)
         {
             ParsedLogFiles = parsedLogFiles;
         }
 
-        public List<ParsedLogFile> ParsedLogFiles { get; set; }
+        public List<ParsedLogFileDto> ParsedLogFiles { get; set; }
     }
 }

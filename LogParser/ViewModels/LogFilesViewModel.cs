@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Database;
 using Database.Models;
@@ -14,6 +15,8 @@ namespace LogParser.ViewModels
 {
     public class LogFilesViewModel : Screen, IHandle<FilesAddedEvent>, IHandle<StartParsingEvent>
     {
+        private const double progressIncrement = 25;
+
         private BindableCollection<string> filesToParse;
 
         private readonly IEventAggregator eventAggregator;
@@ -70,13 +73,29 @@ namespace LogParser.ViewModels
                 return;
             }
             
-            const double progressIncrement = 25;
-            const double parseIncrement = 50;
-            var parsedLogs = new List<ParsedLogFile>();
+            var parsedLogs = new List<ParsedLogFileDto>();
             var upload = await SettingsManager.GetDpsReportUploadAsync(dbContext).ConfigureAwait(false);
             var userToken = await SettingsManager.GetUserTokenAsync(dbContext).ConfigureAwait(false);
 
             var htmlPath = Path.Combine(ParseService.AssemblyLocation, "Logs");
+
+            string eiPath = Path.Combine(ParseService.AssemblyLocation, ParseService.BaseEIPath);
+
+            string logPath = Path.Combine(eiPath, ParseService.BaseLogPath);
+            if (!Directory.Exists(logPath))
+            {
+                Directory.CreateDirectory(logPath);
+            }
+
+            using var watcher = new FileSystemWatcher(logPath);
+            watcher.Created += OnCreated;
+            watcher.NotifyFilter = NotifyFilters.FileName;
+            watcher.Filter = "*.html";
+            watcher.EnableRaisingEvents = true;
+
+            var parsedFiles = await parseService.ParseFiles(FilesToParse, eiPath, logPath);
+
+            watcher.EnableRaisingEvents = false;
 
             Task<DPSReport> uploadTask = null;
 
@@ -90,11 +109,11 @@ namespace LogParser.ViewModels
                     uploadTask = dpsReportService.UploadToDpsReport(file, userToken);
                 }
 
-                var logFile = await parseService.ParseSingleFile(file, htmlPath).ConfigureAwait(false);
+                //var logFile = await parseService.ParseSingleFile(file, htmlPath).ConfigureAwait(false);
+                var fileName = Path.GetFileNameWithoutExtension(file);
+                var logFile = parseService.ParseSingleFile(parsedFiles.Where(p => p.Contains(fileName)), htmlPath);
 
-                PublishProgressIncrement(parseIncrement / FilesToParse.Count);
-
-                parseService.ClearLogFolder();
+                PublishProgressIncrement(progressIncrement / FilesToParse.Count);
 
                 if (uploadTask != null)
                 {
@@ -109,9 +128,16 @@ namespace LogParser.ViewModels
                 parsedLogs.Add(logFile);
                 PublishProgressIncrement(progressIncrement / FilesToParse.Count);
             }
-            
+
+            parseService.ClearLogFolder();
+
             eventAggregator.Publish(new ParsingFinishedEvent(parsedLogs));
             FilesToParse.Clear();
+        }
+
+        private void OnCreated(object sender, FileSystemEventArgs e)
+        {
+            PublishProgressIncrement(progressIncrement / FilesToParse.Count);
         }
 
         private void PublishProgressIncrement(double progressIncrement)

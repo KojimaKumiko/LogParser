@@ -17,6 +17,9 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using LogParser.Events;
 using MaterialDesignThemes.Wpf;
+using LogParser.Models;
+using AutoMapper;
+using System.Collections.Generic;
 
 namespace LogParser.ViewModels
 {
@@ -25,6 +28,7 @@ namespace LogParser.ViewModels
         private const string DialogIdentifier = "RootDialogHost";
         private const string ClearFilterText = " --- NONE --- ";
 
+        private readonly IMapper mapper;
         private readonly DatabaseContext dbContext;
         private readonly IParseService parseService;
         private readonly IDiscordService discordService;
@@ -40,6 +44,7 @@ namespace LogParser.ViewModels
         private bool isLoadingData;
 
         public LogParserViewModel(
+            IMapper mapper,
             DatabaseContext dbContext,
             IParseService parseService,
             IDiscordService discordService,
@@ -50,6 +55,7 @@ namespace LogParser.ViewModels
         {
             Log.Debug("LogParserViewModel constructor called");
 
+            this.mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             this.dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             this.parseService = parseService ?? throw new ArgumentNullException(nameof(parseService));
             this.discordService = discordService ?? throw new ArgumentNullException(nameof(discordService));
@@ -69,9 +75,9 @@ namespace LogParser.ViewModels
             this.eventAggregator.Subscribe(this);
 
             Items.Add(logFilesViewModel);
-            Items.Add(logDetailsViewModel);
+            //Items.Add(logDetailsViewModel);
 
-            LogFiles = new BindableCollection<ParsedLogFile>();
+            LogFiles = new BindableCollection<ParsedLogFileDto>();
             BossNameFilters = new BindableCollection<string>()
             {
                 ClearFilterText
@@ -101,7 +107,7 @@ namespace LogParser.ViewModels
         private static string AssemblyLocation => Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         private static string BaseLogResult => "LogResult";
         public static string LogResultPath => Path.Combine(AssemblyLocation, BaseLogResult);
-        public BindableCollection<ParsedLogFile> LogFiles { get; private set; }
+        public BindableCollection<ParsedLogFileDto> LogFiles { get; private set; }
         public BindableCollection<string> BossNameFilters { get; private set; }
         public ICommand ShowDetailsCommand { get; set; }
 
@@ -169,8 +175,8 @@ namespace LogParser.ViewModels
             UpdateEliteInsightsContent = Resource.UpdateEliteInsights;
 
             var message = installed ? Resource.SuccessUpdate : Resource.SuccessInstalled;
-            var messageModel = new MessageViewModel(message);
-            await MaterialDesignThemes.Wpf.DialogHost.Show(messageModel, DialogIdentifier).ConfigureAwait(true);
+            var messageModel = new MessageDialog(message);
+            await DialogHost.Show(messageModel, DialogIdentifier).ConfigureAwait(true);
 
             installed = true;
         }
@@ -182,7 +188,7 @@ namespace LogParser.ViewModels
                 return;
             }
 
-            var logFiles = dbContext.ParsedLogFiles.AsQueryable();
+            var logFiles = dbContext.ParsedLogFiles.AsQueryable().AsNoTracking();
 
             if (SelectedBossFilter.Equals(ClearFilterText, StringComparison.InvariantCultureIgnoreCase))
             {
@@ -194,32 +200,28 @@ namespace LogParser.ViewModels
             }
 
             var filteredLogFiles = await logFiles.OrderBy(l => l.StartTime).ToListAsync().ConfigureAwait(true);
+            var logFileDtos = mapper.Map<List<ParsedLogFileDto>>(filteredLogFiles);
 
             LogFiles.Clear();
-            LogFiles.AddRange(filteredLogFiles);
+            LogFiles.AddRange(logFileDtos);
         }
 
         public void OpenLink(string path)
         {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                throw new ArgumentNullException(nameof(path));
-            }
-
-            Process.Start("explorer", path);
+            Helper.OpenLink(path);
         }
 
         public async Task SendToDiscord(System.Collections.IList selectedItems)
         {
             if (selectedItems == null || selectedItems.Count == 0)
             {
-                var messageModel = new MessageViewModel(Resource.Err_SelectLogs);
+                var messageModel = new MessageDialog(Resource.Err_SelectLogs);
                 await DialogHost.Show(messageModel, DialogIdentifier).ConfigureAwait(true);
 
                 return;
             }
 
-            var selectedLogs = selectedItems.Cast<ParsedLogFile>().ToList();
+            var selectedLogs = selectedItems.Cast<ParsedLogFileDto>().ToList();
             selectedLogs = selectedLogs.OrderBy(l => l.StartTime).ToList();
 
             await discordService.SendReports(selectedLogs).ConfigureAwait(true);
@@ -257,10 +259,13 @@ namespace LogParser.ViewModels
                 throw new ArgumentNullException(nameof(dataGrid));
             }
 
-            var logEntries = dataGrid.SelectedItems.Cast<ParsedLogFile>();
+            var logEntries = dataGrid.SelectedItems.Cast<ParsedLogFileDto>();
 
             var parsedLogFiles = logEntries.ToList();
-            dbContext.ParsedLogFiles.RemoveRange(parsedLogFiles);
+
+            var logFiles = dbContext.ParsedLogFiles.AsQueryable().Where(log => parsedLogFiles.Select(l => l.ID).Contains(log.ID)).ToList();
+            dbContext.RemoveRange(logFiles);
+
             await dbContext.SaveChangesAsync().ConfigureAwait(true);
 
             LogFiles.RemoveRange(parsedLogFiles);
@@ -282,11 +287,12 @@ namespace LogParser.ViewModels
             Log.Information("Finished parsing files");
 
             var parsedLogs = message.ParsedLogFiles;
-            await dbContext.ParsedLogFiles.AddRangeAsync(parsedLogs);
-            
+            var logFiles = mapper.Map<List<ParsedLogFile>>(parsedLogs);
+            await dbContext.ParsedLogFiles.AddRangeAsync(logFiles);
+
             Log.Information("Saving logs in the Database");
             await dbContext.SaveChangesAsync().ConfigureAwait(true);
-            
+
             LogFiles.AddRange(parsedLogs);
             
             Progress += 20;
@@ -315,10 +321,12 @@ namespace LogParser.ViewModels
         {
             IsLoadingData = true;
 
-            var orderedLogs = dbContext.ParsedLogFiles.AsQueryable().OrderBy(l => l.StartTime);
+            var orderedLogs = dbContext.ParsedLogFiles.AsQueryable().AsNoTracking().OrderBy(l => l.StartTime);
             var parsedLogs = await orderedLogs.ToListAsync().ConfigureAwait(true);
+            var logFiles = mapper.Map<List<ParsedLogFileDto>>(parsedLogs);
+
             LogFiles.Clear();
-            LogFiles.AddRange(parsedLogs);
+            LogFiles.AddRange(logFiles);
 
             IsLoadingData = false;
         }

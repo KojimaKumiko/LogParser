@@ -19,7 +19,7 @@ namespace LogParser.ViewModels
 
         public void OpenLink(string link)
         {
-            Process.Start("explorer", link);
+            Helper.OpenLink(link);
         }
 
         public async Task ShowLicense()
