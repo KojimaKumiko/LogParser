@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Globalization;
 using System.Resources;
-using System.Text;
 using System.Windows.Data;
 
 namespace LogParser

@@ -1,24 +1,24 @@
-﻿using Stylet;
+﻿using LogParser.Events;
+using Stylet;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LogParser.ViewModels
 {
-    public class LogDetailsViewModel : Screen
+    public class LogDetailsViewModel : Screen, IHandle<LogSelectedEvent>
     {
-        private string test;
+        private readonly IEventAggregator eventAggregator;
 
-        public LogDetailsViewModel()
+        public LogDetailsViewModel(IEventAggregator eventAggregator)
         {
+            DisplayName = "Details";
+
+            this.eventAggregator = eventAggregator ?? throw new ArgumentNullException(nameof(eventAggregator));
+
+            this.eventAggregator.Subscribe(this);
         }
 
-        public string Test
+        public void Handle(LogSelectedEvent eventArgs)
         {
-            get { return test; }
-            set { SetAndNotify(ref test, value); }
         }
     }
 }

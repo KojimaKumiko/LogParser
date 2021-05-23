@@ -1,17 +1,24 @@
 ﻿using Database;
+using LogParser.Models;
+using LogParser.Models.Interfaces;
 using LogParser.Services;
 using MaterialDesignThemes.Wpf;
+using RestEase;
 using Stylet;
 using System;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace LogParser.ViewModels
 {
     public class SettingsViewModel : Screen
     {
+        private const string DialogIdentifier = "RootDialogHost";
+
         private readonly DatabaseContext dbContext;
 
-        private readonly DpsReportController dpsReportController;
+        private readonly DpsReportService dpsReportService;
 
         private bool uploadDspReport;
 
@@ -25,10 +32,10 @@ namespace LogParser.ViewModels
 
         private SnackbarMessageQueue messageQueue;
 
-        public SettingsViewModel(DatabaseContext dbContext, DpsReportController dpsReportController, SnackbarMessageQueue messageQueue)
+        public SettingsViewModel(DatabaseContext dbContext, DpsReportService dpsReportService, SnackbarMessageQueue messageQueue)
         {
             this.dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-            this.dpsReportController = dpsReportController ?? throw new ArgumentNullException(nameof(dpsReportController));
+            this.dpsReportService = dpsReportService ?? throw new ArgumentNullException(nameof(dpsReportService));
             this.messageQueue = messageQueue ?? throw new ArgumentNullException(nameof(messageQueue));
 
             _ = LoadDataFromDatabase();
@@ -66,7 +73,7 @@ namespace LogParser.ViewModels
 
         public async Task GenerateToken()
         {
-            UserToken = await dpsReportController.GetUserToken().ConfigureAwait(true);
+            UserToken = await dpsReportService.GetUserToken().ConfigureAwait(true);
         }
 
         public async Task SaveSettings()
@@ -80,6 +87,13 @@ namespace LogParser.ViewModels
             await dbContext.SaveChangesAsync().ConfigureAwait(true);
 
             messageQueue.Enqueue("Settings succesfully saved.");
+        }
+
+        public async Task CheckVersion()
+        {
+            string link = await Helper.CheckForNewVersion();
+            var versionDialog = new VersionDialog(link);
+            await DialogHost.Show(versionDialog, DialogIdentifier).ConfigureAwait(true);
         }
 
         private async Task LoadDataFromDatabase()

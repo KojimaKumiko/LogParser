@@ -20,6 +20,7 @@ namespace Database
                 context.Settings.Add(new Setting { Name = SettingsManager.WebhookUrl, Value = string.Empty });
                 context.Settings.Add(new Setting { Name = SettingsManager.WebhookName, Value = string.Empty });
                 context.Settings.Add(new Setting { Name = SettingsManager.PostDiscord, Value = "False" });
+                context.Settings.Add(new Setting { Name = SettingsManager.UpdateCheck, Value = string.Empty });
                 context.Settings.Add(new Setting { Name = SettingsManager.Seeded, Value = "True" });
                 context.SaveChanges();
             }

@@ -12,14 +12,12 @@
         d:DataContext="{d:DesignInstance vm:LogDetailsViewModel}"
         Height="450" Width="800">
     <Grid Background="{DynamicResource MaterialDesignPaper}">
-        <Grid.RowDefinitions>
+        <!--<Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="50" />
-        </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Text="{Binding Test}" Width="250" Height="25" />
-
-        <Button Grid.Row="1" Width="125" HorizontalAlignment="Right"
-                Margin="0 0 10 0" Content="Close"
-                Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}"/>
+        </Grid.RowDefinitions>-->
+        
+        
+        
     </Grid>
 </UserControl>

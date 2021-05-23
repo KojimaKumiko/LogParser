@@ -18,7 +18,7 @@ namespace Database
 
         public DbSet<Setting> Settings { get; set; }
 
-        [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "The method is provied by Entity Framework Core and gets called by it.")]
+        [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "The method is provied and get's called by Entity Framework Core.")]
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ParsedLogFile>()

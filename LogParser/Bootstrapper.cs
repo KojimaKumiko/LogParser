@@ -6,12 +6,13 @@ using Microsoft.Extensions.Configuration;
 using Stylet;
 using StyletIoC;
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Serilog;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using MaterialDesignThemes.Wpf;
+using AutoMapper;
+using LogParser.Models;
 
 namespace LogParser
 {
@@ -23,17 +24,12 @@ namespace LogParser
 
         private SnackbarMessageQueue messageQueue;
 
+        private MapperConfiguration mapperConfig;
+
         public override void Dispose()
         {
-            if (messageQueue != null)
-            {
-                messageQueue.Dispose();
-            }
-
-            if (database != null)
-            {
-                database.Dispose();
-            }
+            messageQueue?.Dispose();
+            database?.Dispose();
 
             base.Dispose();
             GC.SuppressFinalize(this);
@@ -54,6 +50,12 @@ namespace LogParser
                 .ReadFrom.Configuration(configuration)
                 .CreateLogger();
 
+            mapperConfig = new MapperConfiguration(cfg =>
+            {
+                cfg.DisableConstructorMapping();
+                cfg.AddProfile<MapperProfile>();
+            });
+
             var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
 
             optionsBuilder.UseSqlite(configuration.GetConnectionString("Database"));
@@ -64,21 +66,21 @@ namespace LogParser
 
             messageQueue = new SnackbarMessageQueue();
 
-            Log.Debug("Configuration done.");
+            Log.Debug("Configuration done");
         }
 
-        [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "The method and it's parameter is provided by Stylet and get's called from it.")]
         protected override void ConfigureIoC(IStyletIoCBuilder builder)
         {
-            Log.Debug("Configuring IoC.");
+            Log.Debug("Configuring IoC");
 
             // Instance bindings
             builder.Bind<IConfiguration>().ToInstance(configuration);
+            builder.Bind<IMapper>().ToInstance(mapperConfig.CreateMapper());
             builder.Bind<DatabaseContext>().ToInstance(database).DisposeWithContainer(false);
             builder.Bind<SnackbarMessageQueue>().ToInstance(messageQueue).DisposeWithContainer(false);
 
             // Service/Controller bindings
-            builder.Bind<DpsReportController>().ToSelf();
+            builder.Bind<DpsReportService>().ToSelf();
             builder.Bind<IParseService>().To<ParseService>();
             builder.Bind<IDiscordService>().To<DiscordService>();
 
@@ -86,15 +88,33 @@ namespace LogParser
             builder.Bind<LogParserViewModel>().ToSelf();
             builder.Bind<SettingsViewModel>().ToSelf();
             builder.Bind<AboutViewModel>().ToSelf();
+            builder.Bind<LogFilesViewModel>().ToSelf();
         }
 
         protected override void Configure()
         {
-            Log.Debug("Seeding database.");
+            Log.Debug("Seeding database");
             DatabaseSeeder.Seed(database);
         }
 
-        [SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "The hook get's called through Stylets bootstrapper.")]
+        /// <summary>
+        /// Called just after the root view has been displayed.
+        /// </summary>
+        protected override void OnLaunch()
+        {
+            var lastCheck = SettingsManager.GetLastUpdateCheck(database);
+            var timeSpan = DateTime.Now.Subtract(lastCheck);
+
+            if (timeSpan.Days >= 7)
+            {
+                CheckVersion();
+            }
+
+            var updateTask = SettingsManager.UpdateSetting(database, DateTime.Now.ToShortDateString(), SettingsManager.UpdateCheck);
+            updateTask.ConfigureAwait(true).GetAwaiter().GetResult();
+            database.SaveChanges();
+        }
+
         protected override void OnUnhandledException(DispatcherUnhandledExceptionEventArgs e)
         {
             Log.Error(e.Exception, "Application.Current.DispatcherUnhandledException");
@@ -111,6 +131,16 @@ namespace LogParser
                 Log.Error(e.Exception, "TaskScheduler.UnobservedTaskException");
                 e.SetObserved();
             };
+        }
+
+        private static async void CheckVersion()
+        {
+            string link = await Helper.CheckForNewVersion();
+            if (!string.IsNullOrWhiteSpace(link))
+            {
+                var versionDialog = new VersionDialog(link);
+                await DialogHost.Show(versionDialog, "RootDialogHost").ConfigureAwait(true);
+            }
         }
     }
 }

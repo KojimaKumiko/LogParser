@@ -1,12 +1,10 @@
 ﻿using MaterialDesignThemes.Wpf;
-using Serilog;
 using Stylet;
-using System;
 using System.Reflection;
 
 namespace LogParser.ViewModels
 {
-    public class ShellViewModel : Conductor<IScreen>
+    public class ShellViewModel : Conductor<IScreen>.Collection.OneActive
     {
         private readonly LogParserViewModel logParserViewModel;
 

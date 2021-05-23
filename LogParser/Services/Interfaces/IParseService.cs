@@ -1,9 +1,6 @@
-﻿using Database.Models;
+﻿using LogParser.Models;
 using LogParser.Models.Enums;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace LogParser.Services
@@ -13,10 +10,19 @@ namespace LogParser.Services
         /// <summary>
         /// Parses a single ArcDPS-LogFile.
         /// </summary>
-        /// <param name="fileName">The name of the file to parse.</param>
+        /// <param name="fileNames">The path of the parsed JSON and HTML-Files.</param>
         /// <param name="htmlPath">The path to folder to store the resulting Html-File.</param>
         /// <returns>The parsed log file.</returns>
-        Task<ParsedLogFile> ParseSingleFile(string fileName, string htmlPath);
+        ParsedLogFileDto ParseSingleFile(IEnumerable<string> fileNames, string htmlPath);
+
+        /// <summary>
+        /// Parses multiple ArcDPS-Log-Files with EliteInsights.
+        /// </summary>
+        /// <param name="fileNames">The path of the Log-Files</param>
+        /// <param name="eiPath">The path for Elite Insights</param>
+        /// <param name="logPath">The path for storing the resulting JSON and HTML-Files.</param>
+        /// <returns>The full paths of the generated JSON and HTML-Files.</returns>
+        Task<IEnumerable<string>> ParseFiles(IEnumerable<string> fileNames, string eiPath, string logPath);
 
         /// <summary>
         /// Checks whether Elite Insights is installed or not.
